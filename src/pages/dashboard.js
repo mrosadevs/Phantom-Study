@@ -23,6 +23,9 @@ export function initDashboard() {
   document.getElementById('btnLogoutWs')?.addEventListener('click', handleLogout);
   document.getElementById('btnLogoutMod')?.addEventListener('click', handleLogout);
 
+  // Back to dashboard from workspace
+  document.getElementById('btnBackToDashboard')?.addEventListener('click', goToDashboard);
+
   // Logo clicks -> dashboard
   ['dashLogo', 'wsLogo', 'modLogo', 'fcLogo', 'qzLogo', 'fiLogo', 'commLogo'].forEach(id => {
     document.getElementById(id)?.addEventListener('click', goToDashboard);

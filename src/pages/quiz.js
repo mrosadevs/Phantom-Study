@@ -68,7 +68,8 @@ function answerQuiz(idx, choice) {
   btns.forEach(b => b.disabled = true);
 
   const q = quizData[quizIdx];
-  const ok = choice === q.answer;
+  const correctText = q.choices[q.answer];
+  const ok = choice === correctText;
   btns[idx].classList.add(ok ? 'correct' : 'wrong');
 
   if (ok) {
@@ -76,8 +77,8 @@ function answerQuiz(idx, choice) {
     document.getElementById('qFeedback').innerHTML = '<span style="color:var(--accent)">Correct!</span>';
     if (navigator.vibrate) navigator.vibrate([25, 25, 25]);
   } else {
-    document.getElementById('qFeedback').innerHTML = `<span style="color:var(--accent3)">Answer: ${esc(q.answer)}</span>`;
-    btns.forEach(b => { if (b.textContent === q.answer) b.classList.add('correct'); });
+    document.getElementById('qFeedback').innerHTML = `<span style="color:var(--accent3)">Wrong! Correct: ${esc(correctText)}</span>`;
+    btns.forEach(b => { if (b.dataset.choice === correctText) b.classList.add('correct'); });
     if (navigator.vibrate) navigator.vibrate(180);
   }
 

@@ -14,7 +14,7 @@ const STEPS = [
     position: 'below',
   },
   {
-    target: '.nav-theme-slot',
+    target: '#themeSlotDash',
     title: 'LIGHT / DARK MODE',
     desc: 'Toggle between light and dark mode anytime with this button.',
     position: 'below',

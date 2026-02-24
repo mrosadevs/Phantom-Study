@@ -32,7 +32,8 @@ export function getPrompt(type, text) {
 export async function callAI(prompt, model) {
   model = model || getSelectedModel();
 
-  // Try serverless function first (production), fall back to direct API (dev)
+  // Try serverless function first (production)
+  let serverlessError = null;
   try {
     const res = await fetch('/api/generate', {
       method: 'POST',
@@ -43,15 +44,24 @@ export async function callAI(prompt, model) {
       const data = await res.json();
       return data.text;
     }
+    // Read server error for debugging
+    const errData = await res.json().catch(() => ({}));
+    serverlessError = errData?.error || `Server error ${res.status}`;
+    console.warn('Serverless API error:', serverlessError);
   } catch (e) {
-    // Serverless function not available, fall back to direct API
+    console.warn('Serverless function unavailable, trying direct API');
   }
 
-  // Direct API calls (for local dev or when serverless is unavailable)
-  if (model === 'kimi') {
-    return callKimiDirect(prompt);
+  // Fall back to direct API calls (local dev or serverless failure)
+  try {
+    if (model === 'kimi') {
+      return await callKimiDirect(prompt);
+    }
+    return await callGeminiDirect(prompt);
+  } catch (directErr) {
+    // If both serverless and direct fail, show the most helpful error
+    throw new Error(serverlessError || directErr.message);
   }
-  return callGeminiDirect(prompt);
 }
 
 // Direct Gemini API call

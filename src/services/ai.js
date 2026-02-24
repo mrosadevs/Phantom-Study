@@ -1,13 +1,8 @@
-// AI service — handles Gemini and Kimi API calls (v1.1)
+// AI service — Groq (Llama 3.3 70B)
 
-// Get the selected model from localStorage
-export function getSelectedModel() {
-  return localStorage.getItem('phantom-ai-model') || 'gemini';
-}
-
-export function setSelectedModel(model) {
-  localStorage.setItem('phantom-ai-model', model);
-}
+// Stubs kept for compatibility (only one model now)
+export function getSelectedModel() { return 'groq'; }
+export function setSelectedModel() {}
 
 // Prompts — exported so the manual import feature can show them
 export function promptFlash(text) {
@@ -33,105 +28,68 @@ function fetchWithTimeout(url, options, timeoutMs = 90000) {
   return Promise.race([
     fetch(url, options),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out. The AI model is taking too long — try again or use a different model.')), timeoutMs)
+      setTimeout(() => reject(new Error('Request timed out — try again in a moment.')), timeoutMs)
     ),
   ]);
 }
 
-// Call the AI API based on selected model
-export async function callAI(prompt, model) {
-  model = model || getSelectedModel();
-
-  // Try serverless function first (production)
-  let serverlessError = null;
+// Call Groq via serverless proxy, fall back to direct if unavailable
+export async function callAI(prompt) {
+  // Try serverless function first (production — key stays server-side)
   try {
     const res = await fetchWithTimeout('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt }),
-    }, 120000);
+      body: JSON.stringify({ prompt }),
+    }, 90000);
+
     if (res.ok) {
       const data = await res.json();
       return data.text;
     }
-    // Read server error for debugging
+
     const errData = await res.json().catch(() => ({}));
-    serverlessError = errData?.error || `Server error ${res.status}`;
-    console.warn('Serverless API error:', serverlessError);
+    const serverMsg = errData?.error || `Server error ${res.status}`;
+    console.warn('Serverless API error:', serverMsg);
+    throw new Error(serverMsg);
   } catch (e) {
     if (e.message.includes('timed out')) throw e;
-    console.warn('Serverless function unavailable, trying direct API');
+    console.warn('Serverless unavailable, trying direct Groq call');
   }
 
-  // Fall back to direct API calls (local dev or serverless failure)
-  try {
-    if (model === 'kimi') {
-      return await callKimiDirect(prompt);
-    }
-    return await callGeminiDirect(prompt);
-  } catch (directErr) {
-    // If both serverless and direct fail, show the most helpful error
-    const msg = serverlessError || directErr.message;
-    // Make quota errors more user-friendly
-    if (msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
-      throw new Error('API quota exceeded. The free API key has hit its limit. Try the Kimi model instead, or use the "Import from ChatGPT" option below.');
-    }
-    throw new Error(msg);
-  }
+  // Direct fallback (local dev)
+  return callGroqDirect(prompt);
 }
 
-// Direct Gemini API call
-async function callGeminiDirect(prompt) {
-  const key = import.meta.env.VITE_GEMINI_API_KEY || '';
-  if (!key) throw new Error('Gemini API key not configured');
+async function callGroqDirect(prompt) {
+  const key = import.meta.env.VITE_GROQ_API_KEY || '';
+  if (!key) throw new Error('Groq API key not configured. Add VITE_GROQ_API_KEY to your .env file.');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-  const res = await fetchWithTimeout(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-    }),
-  }, 60000);
-
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error(e?.error?.message || 'Gemini API error ' + res.status);
-  }
-
-  const d = await res.json();
-  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-}
-
-// Direct Kimi API call (NVIDIA NIM) — reasoning model, needs higher token budget
-async function callKimiDirect(prompt) {
-  const key = import.meta.env.VITE_NVIDIA_API_KEY || '';
-  if (!key) throw new Error('NVIDIA API key not configured. Add your Kimi API key in settings.');
-
-  const res = await fetchWithTimeout('https://integrate.api.nvidia.com/v1/chat/completions', {
+  const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: 'moonshotai/kimi-k2.5',
+      model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 16384,
+      max_tokens: 4096,
     }),
-  }, 120000);
+  }, 60000);
 
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
-    throw new Error(e?.error?.message || 'Kimi API error ' + res.status);
+    const msg = e?.error?.message || 'Groq API error ' + res.status;
+    if (msg.includes('rate_limit') || msg.includes('429')) {
+      throw new Error('Rate limit hit — Groq allows up to 6,000 tokens/min on free tier. Wait a moment and try again, or use the "Import from ChatGPT" option below.');
+    }
+    throw new Error(msg);
   }
 
   const d = await res.json();
-  // Kimi is a reasoning model — content may be in `content` or `reasoning_content`
-  const msg = d.choices?.[0]?.message;
-  return msg?.content || msg?.reasoning_content || '';
+  return d.choices?.[0]?.message?.content || '';
 }
 
 // Parse JSON from AI response

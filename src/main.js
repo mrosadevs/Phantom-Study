@@ -16,14 +16,17 @@ import { initTutorial, showFirstTimeTutorial } from './components/tutorial.js';
 import { initLanding } from './pages/landing.js';
 import { initAuth } from './pages/auth.js';
 import { initDashboard, onLogin } from './pages/dashboard.js';
-import { initWorkspace } from './pages/workspace.js';
-import { initModule } from './pages/module.js';
+import { initWorkspace, openWorkspace } from './pages/workspace.js';
+import { initModule, openModule } from './pages/module.js';
 import { initFlashcards } from './pages/flashcards.js';
 import { initQuiz } from './pages/quiz.js';
 import { initFillin } from './pages/fillin.js';
 
 // Services
-import { getSession, onAuthStateChange } from './services/supabase.js';
+import { onAuthStateChange, getWorkspaceById } from './services/supabase.js';
+
+// Helpers
+import { showPage } from './utils/helpers.js';
 
 // ==================== CURSOR ====================
 function initCursor() {
@@ -59,6 +62,36 @@ function initCursor() {
   });
 }
 
+// ==================== SESSION RESTORE ====================
+// Restore the user to wherever they were before leaving the tab/browser
+async function restoreLastPage() {
+  const page = localStorage.getItem('phantom-last-page');
+  if (!page || page === 'dashboard') return; // already on dashboard after onLogin
+
+  try {
+    if (page === 'workspace') {
+      const wsId = localStorage.getItem('phantom-last-ws');
+      if (wsId) {
+        const item = await getWorkspaceById(wsId);
+        // Only restore if this workspace belongs to the current user
+        if (item && item.user_id === window._phantomUser?.id) {
+          await openWorkspace(item);
+          return;
+        }
+      }
+    } else if (['module', 'flashcards', 'quiz', 'fillin'].includes(page)) {
+      const modId = localStorage.getItem('phantom-last-mod');
+      if (modId) {
+        await openModule(modId);
+        return;
+      }
+    }
+  } catch (e) {
+    // Silently fall back to dashboard if restore fails
+    console.warn('Session restore failed, staying on dashboard:', e);
+  }
+}
+
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
   // Core
@@ -87,10 +120,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (_loginHandled) return;
       _loginHandled = true;
       onLogin(session.user);
-      showFirstTimeTutorial();
+      if (ev === 'INITIAL_SESSION') {
+        // Returning user — restore their last location
+        restoreLastPage();
+      } else {
+        // Fresh login — show tutorial for first-timers
+        showFirstTimeTutorial();
+      }
     }
     if (ev === 'SIGNED_OUT') {
       _loginHandled = false;
+      localStorage.removeItem('phantom-last-page');
+      localStorage.removeItem('phantom-last-ws');
+      localStorage.removeItem('phantom-last-mod');
     }
   });
 });

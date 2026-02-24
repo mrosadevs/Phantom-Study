@@ -5,6 +5,7 @@ import { renderTiles, openAddModal, goToDashboard } from './dashboard.js';
 export async function openWorkspace(item) {
   window._phantomCurrentWsId = item.id;
   window._phantomWsPath = [{ id: item.id, name: item.name, emoji: item.emoji }];
+  localStorage.setItem('phantom-last-ws', item.id);
 
   document.getElementById('wsEmoji').textContent = item.emoji || '\uD83D\uDCDA';
   document.getElementById('wsTitle').textContent = item.name;

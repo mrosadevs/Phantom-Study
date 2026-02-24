@@ -15,6 +15,7 @@ export function getModData() { return modData; }
 
 export async function openModule(modId, item = null) {
   window._phantomCurrentModId = modId;
+  localStorage.setItem('phantom-last-mod', modId);
   if (!item) { item = await getWorkspaceById(modId); }
   document.getElementById('moduleTitle').textContent = item.name;
   updateBreadcrumb('modBreadcrumb', true, item.name);

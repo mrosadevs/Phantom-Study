@@ -41,6 +41,10 @@ export function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'instant' });
+  // Persist last app page so we can restore it when the user returns
+  if (!['landing', 'login'].includes(id)) {
+    localStorage.setItem('phantom-last-page', id);
+  }
 }
 
 // Smooth scroll to section

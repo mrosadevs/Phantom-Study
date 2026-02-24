@@ -1,5 +1,5 @@
-// Vercel Serverless Function — proxies AI API calls
-// Keeps API keys server-side for security
+// Vercel Serverless Function — proxies Groq API calls
+// Keeps API key server-side for security
 
 export default async function handler(req, res) {
   // CORS
@@ -15,74 +15,44 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { model, prompt } = req.body;
+  const { prompt } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Missing prompt' });
   }
 
   try {
-    let text;
-    if (model === 'kimi') {
-      text = await callKimi(prompt);
-    } else {
-      text = await callGemini(prompt);
-    }
+    const text = await callGroq(prompt);
     return res.status(200).json({ text });
   } catch (error) {
-    console.error('AI API error:', error);
+    console.error('Groq API error:', error);
     return res.status(500).json({ error: error.message || 'AI generation failed' });
   }
 }
 
-async function callGemini(prompt) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('Gemini API key not configured on server');
+async function callGroq(prompt) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error('Groq API key not configured on server');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Gemini API error ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-}
-
-async function callKimi(prompt) {
-  const key = process.env.NVIDIA_API_KEY;
-  if (!key) throw new Error('NVIDIA API key not configured on server');
-
-  const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: 'moonshotai/kimi-k2.5',
+      model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 16384,
+      max_tokens: 4096,
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Kimi API error ${response.status}`);
+    throw new Error(err?.error?.message || `Groq API error ${response.status}`);
   }
 
   const data = await response.json();
-  // Kimi is a reasoning model — content may be in `content` or `reasoning_content`
-  const msg = data.choices?.[0]?.message;
-  return msg?.content || msg?.reasoning_content || '';
+  return data.choices?.[0]?.message?.content || '';
 }

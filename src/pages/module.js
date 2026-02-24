@@ -1,5 +1,6 @@
 import { getModuleData, saveModuleData, getWorkspaceById } from '../services/supabase.js';
-import { callAI, getPrompt, parseFlash, parseQuiz, parseFill, getSelectedModel, setSelectedModel, promptFlash, promptQuiz, promptFill } from '../services/ai.js';
+import { callAI, getPrompt, parseFlash, parseQuiz, parseFill, parseAll, getSelectedModel, setSelectedModel, promptFlash, promptQuiz, promptFill, promptAll } from '../services/ai.js';
+import { exportModule, importModule, pickJSONFile } from '../services/export-import.js';
 import { parseFile } from '../services/file-parser.js';
 import { showPage, esc, escA, toast } from '../utils/helpers.js';
 import { updateBreadcrumb } from './workspace.js';
@@ -72,11 +73,37 @@ export function initModule() {
 
   // Import from ChatGPT/Claude
   initImportSection();
+
+  // Export module as JSON file
+  document.getElementById('btnExportModule')?.addEventListener('click', () => {
+    if (!window._phantomCurrentModId) return;
+    const name = document.getElementById('moduleTitle')?.textContent || 'Module';
+    exportModule(window._phantomCurrentModId, name, window._phantomUser.id);
+  });
+
+  // Import module from JSON file (replaces current module data)
+  document.getElementById('btnImportModuleFile')?.addEventListener('click', async () => {
+    if (!window._phantomCurrentModId) return;
+    try {
+      const json = await pickJSONFile();
+      if (json.type !== 'phantom-module') throw new Error('Not a valid Phantom Study module file');
+      const d = json.data || {};
+      modData.flashcards = d.flashcards || [];
+      modData.quiz       = d.quiz       || [];
+      modData.fillin     = d.fillin     || [];
+      await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
+      updateCounts();
+      renderEditor();
+      toast(`Module imported! ${modData.flashcards.length} flashcards, ${modData.quiz.length} quiz Q's, ${modData.fillin.length} fill-ins`, 'success');
+    } catch (e) {
+      toast('Import failed: ' + e.message, 'error');
+    }
+  });
 }
 
 // ==================== IMPORT FROM CHATGPT ====================
 
-let importType = 'flashcards';
+let importType = 'all';
 
 function initImportSection() {
   const toggle = document.getElementById('btnImportToggle');
@@ -88,12 +115,12 @@ function initImportSection() {
     updateImportPrompt();
   });
 
-  // Import type tabs
-  const tabs = { impFlash: 'flashcards', impQuiz: 'quiz', impFill: 'fillin' };
+  // Import type tabs (All is default)
+  const tabs = { impAll: 'all', impFlash: 'flashcards', impQuiz: 'quiz', impFill: 'fillin' };
   Object.entries(tabs).forEach(([id, type]) => {
     document.getElementById(id)?.addEventListener('click', () => {
       importType = type;
-      Object.keys(tabs).forEach(tid => document.getElementById(tid).classList.toggle('active', tid === id));
+      Object.keys(tabs).forEach(tid => document.getElementById(tid)?.classList.toggle('active', tid === id));
       updateImportPrompt();
     });
   });
@@ -112,14 +139,9 @@ function initImportSection() {
 function updateImportPrompt() {
   const el = document.getElementById('importPromptText');
   if (!el) return;
-  const sampleContent = '[PASTE YOUR NOTES/CONTENT HERE]';
-  if (importType === 'flashcards') {
-    el.textContent = promptFlash(sampleContent);
-  } else if (importType === 'quiz') {
-    el.textContent = promptQuiz(sampleContent);
-  } else {
-    el.textContent = promptFill(sampleContent);
-  }
+  const sample = '[PASTE YOUR NOTES/CONTENT HERE]';
+  const map = { all: promptAll, flashcards: promptFlash, quiz: promptQuiz, fillin: promptFill };
+  el.textContent = (map[importType] || promptAll)(sample);
 }
 
 async function handleImportJson() {
@@ -127,26 +149,39 @@ async function handleImportJson() {
   if (!raw) { toast('Paste the JSON response first!', 'error'); return; }
 
   try {
-    let parsed;
-    if (importType === 'flashcards') {
-      parsed = parseFlash(raw);
-      if (!parsed.length) throw new Error('No valid flashcards found');
-      modData.flashcards = parsed;
-    } else if (importType === 'quiz') {
-      parsed = parseQuiz(raw);
-      if (!parsed.length) throw new Error('No valid quiz questions found');
-      modData.quiz = parsed;
+    if (importType === 'all') {
+      const parsed = parseAll(raw);
+      const total  = parsed.flashcards.length + parsed.quiz.length + parsed.fillin.length;
+      if (!total) throw new Error('No valid study data found in JSON');
+      modData.flashcards = parsed.flashcards;
+      modData.quiz       = parsed.quiz;
+      modData.fillin     = parsed.fillin;
+      await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
+      updateCounts();
+      renderEditor();
+      document.getElementById('importJsonInput').value = '';
+      toast(`Imported! ${parsed.flashcards.length} flashcards · ${parsed.quiz.length} quiz Q's · ${parsed.fillin.length} fill-ins`, 'success');
     } else {
-      parsed = parseFill(raw);
-      if (!parsed.length) throw new Error('No valid fill-in questions found');
-      modData.fillin = parsed;
+      let parsed;
+      if (importType === 'flashcards') {
+        parsed = parseFlash(raw);
+        if (!parsed.length) throw new Error('No valid flashcards found');
+        modData.flashcards = parsed;
+      } else if (importType === 'quiz') {
+        parsed = parseQuiz(raw);
+        if (!parsed.length) throw new Error('No valid quiz questions found');
+        modData.quiz = parsed;
+      } else {
+        parsed = parseFill(raw);
+        if (!parsed.length) throw new Error('No valid fill-in questions found');
+        modData.fillin = parsed;
+      }
+      await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
+      updateCounts();
+      renderEditor();
+      document.getElementById('importJsonInput').value = '';
+      toast(`Imported ${parsed.length} ${importType}!`, 'success');
     }
-
-    await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
-    updateCounts();
-    renderEditor();
-    document.getElementById('importJsonInput').value = '';
-    toast(`Imported ${parsed.length} ${importType}!`, 'success');
   } catch (e) {
     toast('Import error: ' + e.message, 'error');
   }

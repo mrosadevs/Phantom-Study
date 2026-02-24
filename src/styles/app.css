@@ -117,6 +117,14 @@
 }
 .tile:hover .tile-delete { opacity: 1; }
 .tile-delete:hover { color: var(--accent3); }
+.tile-export {
+  position: absolute; top: 0.8rem; right: 2.4rem;
+  background: transparent; border: none; color: var(--muted);
+  cursor: pointer; font-size: 0.85rem; opacity: 0;
+  transition: opacity 0.2s, color 0.2s; padding: 0.3rem;
+}
+.tile:hover .tile-export { opacity: 1; }
+.tile-export:hover { color: var(--accent); }
 
 .tile-add {
   border-style: dashed; border-color: var(--border);

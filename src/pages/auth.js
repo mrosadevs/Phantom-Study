@@ -1,4 +1,4 @@
-import { signInWithEmail, signUpWithEmail, signInWithGoogle, signOut } from '../services/supabase.js';
+import { signInWithEmail, signUpWithEmail, signOut } from '../services/supabase.js';
 import { showPage, toast } from '../utils/helpers.js';
 import { onLogin } from './dashboard.js';
 
@@ -12,9 +12,6 @@ export function initAuth() {
 
   // Signup
   document.getElementById('btnSignup')?.addEventListener('click', handleSignup);
-
-  // Google OAuth
-  document.getElementById('btnGoogleAuth')?.addEventListener('click', handleGoogleAuth);
 
   // Back to home
   document.getElementById('backToHome')?.addEventListener('click', () => showPage('landing'));
@@ -67,15 +64,6 @@ async function handleSignup() {
     setAuthErr(error.message);
   }
   setBtnLoad('btnSignup', 'signupBtnText', false, 'signup');
-}
-
-async function handleGoogleAuth() {
-  try {
-    await signInWithGoogle();
-    // OAuth redirects — the onAuthStateChange callback handles the rest
-  } catch (error) {
-    setAuthErr(error.message);
-  }
 }
 
 export async function handleLogout() {

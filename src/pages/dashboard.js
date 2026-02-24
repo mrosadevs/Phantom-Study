@@ -1,6 +1,7 @@
 import { getWorkspaces, createWorkspace, deleteWorkspace } from '../services/supabase.js';
 import { showPage, esc, toast, EMOJIS, SAMPLE_FLASHCARDS, SAMPLE_QUIZ, SAMPLE_FILLIN } from '../utils/helpers.js';
 import { saveModuleData, createWorkspace as createWs } from '../services/supabase.js';
+import { exportWorkspace, importWorkspace, pickJSONFile } from '../services/export-import.js';
 import { openWorkspace } from './workspace.js';
 import { openModule } from './module.js';
 import { handleLogout } from './auth.js';
@@ -22,6 +23,19 @@ export function initDashboard() {
   // New workspace button
   document.getElementById('btnNewWorkspace')?.addEventListener('click', () => {
     openAddModal(null, 'workspace');
+  });
+
+  // Import workspace from file
+  document.getElementById('btnImportWorkspace')?.addEventListener('click', async () => {
+    try {
+      const json = await pickJSONFile();
+      toast('Importing workspace...', 'info');
+      await importWorkspace(json, window._phantomUser.id);
+      toast('Workspace imported!', 'success');
+      loadWorkspaces();
+    } catch (e) {
+      toast('Import failed: ' + e.message, 'error');
+    }
   });
 
   // Modal
@@ -75,15 +89,23 @@ export function renderTiles(grid, items, parentId, type) {
     const isSample = item.name === 'Biology 101 (Sample)';
     t.innerHTML = `
       <button class="tile-delete" data-id="${item.id}" data-type="${type}" data-parent="${parentId || ''}">&#10005;</button>
+      ${type === 'workspace' ? `<button class="tile-export" data-id="${item.id}" title="Export workspace">&#11015;</button>` : ''}
       <span class="tile-icon">${item.emoji || '\uD83D\uDCDA'}</span>
       <div class="tile-name">${esc(item.name)}</div>
       <div class="tile-meta">${item.description ? esc(item.description) : (type === 'workspace' ? 'Workspace' : 'Study Module')}</div>
       ${isSample ? '<div class="tile-badge">SAMPLE</div>' : ''}
       <div class="tile-glow"></div>`;
 
+    // Export handler (workspace tiles only)
+    t.querySelector('.tile-export')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await exportWorkspace(item.id, window._phantomUser.id);
+    });
+
     // Click handler
     t.addEventListener('click', (e) => {
       if (e.target.closest('.tile-delete')) return;
+      if (e.target.closest('.tile-export')) return;
       if (type === 'workspace') openWorkspace(item);
       else openModule(item.id, item);
     });

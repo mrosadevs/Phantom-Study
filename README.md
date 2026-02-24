@@ -10,7 +10,7 @@
 
 **Turn your notes and slides into flashcards, quizzes, and fill-in-the-blank sets instantly with AI. Study smarter, not harder.**
 
-[🌐 Live Site](https://study.mrosadev.online)
+[🌐 Live Site](https://study.mrosadev.site)
 
 </div>
 

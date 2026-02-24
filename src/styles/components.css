@@ -198,3 +198,46 @@
 .tutorial-actions { display: flex; gap: 0.8rem; justify-content: flex-end; }
 .tutorial-next { max-width: 140px; padding: 0.6rem 1.2rem; font-size: 0.8rem; }
 .btn-ghost { padding: 0.5rem 1rem; }
+
+/* PROFILE */
+.profile-avatar-section {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.8rem; margin-bottom: 1.5rem;
+}
+.profile-avatar-preview {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--surface2); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.profile-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.profile-avatar-placeholder {
+  font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--muted);
+}
+.profile-avatar-btn {
+  font-size: 0.68rem !important; padding: 0.35rem 0.8rem !important; cursor: pointer;
+}
+.profile-email {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  color: var(--muted); padding: 0.5rem 0;
+}
+.profile-username-hint {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+  margin-top: 0.3rem; letter-spacing: 0.05em; min-height: 1em;
+}
+.profile-username-hint.error { color: var(--accent3); }
+.profile-username-hint.success { color: var(--accent); }
+
+/* Nav avatar */
+.nav-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border); overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface2); flex-shrink: 0;
+}
+.nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.nav-user-clickable {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;
+  transition: color 0.2s;
+}
+.nav-user-clickable:hover { color: var(--accent4); }

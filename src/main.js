@@ -5,6 +5,7 @@ import './styles/auth.css';
 import './styles/app.css';
 import './styles/study.css';
 import './styles/components.css';
+import './styles/community.css';
 import './styles/theme.css';
 
 // Components
@@ -21,6 +22,8 @@ import { initModule, openModule } from './pages/module.js';
 import { initFlashcards } from './pages/flashcards.js';
 import { initQuiz } from './pages/quiz.js';
 import { initFillin } from './pages/fillin.js';
+import { initProfile } from './pages/profile.js';
+import { initCommunity } from './pages/community.js';
 
 // Services
 import { onAuthStateChange, getWorkspaceById } from './services/supabase.js';
@@ -108,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initFlashcards();
   initQuiz();
   initFillin();
+  initProfile();
+  initCommunity();
 
   // Tutorial (after pages are ready)
   initTutorial();

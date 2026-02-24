@@ -1,12 +1,16 @@
-import { getWorkspaces, createWorkspace, deleteWorkspace, saveModuleData, markSampleCreated } from '../services/supabase.js';
+import { getWorkspaces, createWorkspace, deleteWorkspace, saveModuleData, markSampleCreated, updateWorkspace, updateWorkspaceOrders, getUserProfile } from '../services/supabase.js';
 import { showPage, esc, toast, EMOJIS, SAMPLE_FLASHCARDS, SAMPLE_QUIZ, SAMPLE_FILLIN } from '../utils/helpers.js';
-import { exportWorkspace, importWorkspace, pickJSONFile } from '../services/export-import.js';
+import { exportWorkspace, importWorkspace, pickJSONFile, buildWorkspaceExportData, buildModuleExportData } from '../services/export-import.js';
 import { openWorkspace } from './workspace.js';
 import { openModule } from './module.js';
 import { handleLogout } from './auth.js';
+import { openProfileModal, loadProfileForNav } from './profile.js';
+import { openCommunity, shareItemToComm } from './community.js';
 
 let selEmoji = '\uD83D\uDCDA';
 let addCtx = { parentId: null, type: 'workspace' };
+let editSelEmoji = '\uD83D\uDCDA';
+let editCtx = { id: null, parentId: null, type: 'workspace', item: null };
 
 export function initDashboard() {
   // Logout buttons
@@ -15,7 +19,7 @@ export function initDashboard() {
   document.getElementById('btnLogoutMod')?.addEventListener('click', handleLogout);
 
   // Logo clicks -> dashboard
-  ['dashLogo', 'wsLogo', 'modLogo', 'fcLogo', 'qzLogo', 'fiLogo'].forEach(id => {
+  ['dashLogo', 'wsLogo', 'modLogo', 'fcLogo', 'qzLogo', 'fiLogo', 'commLogo'].forEach(id => {
     document.getElementById(id)?.addEventListener('click', goToDashboard);
   });
 
@@ -37,9 +41,23 @@ export function initDashboard() {
     }
   });
 
-  // Modal
+  // Community buttons
+  document.getElementById('btnCommunityDash')?.addEventListener('click', () => openCommunity());
+  document.getElementById('btnCommunityWs')?.addEventListener('click', () => openCommunity());
+
+  // Profile — make nav user clickable
+  document.querySelectorAll('.nav-user').forEach(el => {
+    el.classList.add('nav-user-clickable');
+    el.addEventListener('click', openProfileModal);
+  });
+
+  // Add Modal
   document.getElementById('modalAddClose')?.addEventListener('click', () => closeModal('modalAdd'));
   document.getElementById('btnSubmitAdd')?.addEventListener('click', submitAdd);
+
+  // Edit Modal
+  document.getElementById('modalEditClose')?.addEventListener('click', () => closeModal('modalEdit'));
+  document.getElementById('btnSubmitEdit')?.addEventListener('click', submitEdit);
 
   // Close modal on backdrop click
   document.querySelectorAll('.modal-overlay').forEach(o => {
@@ -49,10 +67,13 @@ export function initDashboard() {
   });
 }
 
-export function onLogin(u) {
+export async function onLogin(u) {
   window._phantomUser = u;
-  document.getElementById('navUser').textContent = u.email;
-  document.getElementById('navUser2').textContent = u.email;
+  document.querySelectorAll('.nav-user').forEach(el => { el.textContent = u.email; });
+
+  // Load user profile (username + avatar)
+  await loadProfileForNav(u.id);
+
   loadWorkspaces();
   showPage('dashboard');
 
@@ -69,7 +90,7 @@ export function goToDashboard() {
   showPage('dashboard');
 }
 
-async function loadWorkspaces() {
+export async function loadWorkspaces() {
   const grid = document.getElementById('workspacesGrid');
   grid.innerHTML = '<div style="color:var(--muted);font-family:JetBrains Mono,monospace;font-size:0.72rem;padding:2rem;letter-spacing:0.1em">LOADING...</div>';
   const items = await getWorkspaces(window._phantomUser.id, null);
@@ -84,11 +105,16 @@ export function renderTiles(grid, items, parentId, type) {
   items.forEach((item, i) => {
     const t = document.createElement('div');
     t.className = 'tile';
+    t.draggable = true;
+    t.dataset.tileId = item.id;
+    t.dataset.tileIndex = i;
     t.style.animationDelay = (i * 0.07) + 's';
     const isSample = item.name === 'Biology 101 (Sample)';
     t.innerHTML = `
       <button class="tile-delete" data-id="${item.id}" data-type="${type}" data-parent="${parentId || ''}">&#10005;</button>
-      ${type === 'workspace' ? `<button class="tile-export" data-id="${item.id}" title="Export workspace">&#11015;</button>` : ''}
+      <button class="tile-edit" data-id="${item.id}" title="Edit">&#9998;</button>
+      <button class="tile-share" data-id="${item.id}" title="Share to community">&#9757;</button>
+      ${type === 'workspace' ? `<button class="tile-export" data-id="${item.id}" title="Export as .json">&#11015;</button>` : ''}
       <span class="tile-icon">${item.emoji || '\uD83D\uDCDA'}</span>
       <div class="tile-name">${esc(item.name)}</div>
       <div class="tile-meta">${item.description ? esc(item.description) : (type === 'workspace' ? 'Workspace' : 'Study Module')}</div>
@@ -101,10 +127,35 @@ export function renderTiles(grid, items, parentId, type) {
       await exportWorkspace(item.id, window._phantomUser.id);
     });
 
+    // Edit handler
+    t.querySelector('.tile-edit')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditModal(item, type, parentId);
+    });
+
+    // Share handler
+    t.querySelector('.tile-share')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        toast('Preparing share...', 'info');
+        let exportData;
+        if (type === 'workspace') {
+          exportData = await buildWorkspaceExportData(item.id, window._phantomUser.id);
+        } else {
+          exportData = await buildModuleExportData(item.id, window._phantomUser.id);
+        }
+        await shareItemToComm(exportData, item.name, item.emoji, item.description, type);
+      } catch (err) {
+        toast('Share failed: ' + err.message, 'error');
+      }
+    });
+
     // Click handler
     t.addEventListener('click', (e) => {
       if (e.target.closest('.tile-delete')) return;
       if (e.target.closest('.tile-export')) return;
+      if (e.target.closest('.tile-edit')) return;
+      if (e.target.closest('.tile-share')) return;
       if (type === 'workspace') openWorkspace(item);
       else openModule(item.id, item);
     });
@@ -123,18 +174,77 @@ export function renderTiles(grid, items, parentId, type) {
       }
     });
 
+    // ---- DRAG & DROP ----
+    t.addEventListener('dragstart', (e) => {
+      t.classList.add('tile-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.id);
+      window._phantomDragSource = { id: item.id, index: i, type, parentId };
+    });
+
+    t.addEventListener('dragend', () => {
+      t.classList.remove('tile-dragging');
+      grid.querySelectorAll('.tile-dragover').forEach(el => el.classList.remove('tile-dragover'));
+      window._phantomDragSource = null;
+    });
+
+    t.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (window._phantomDragSource?.id !== item.id) {
+        t.classList.add('tile-dragover');
+      }
+    });
+
+    t.addEventListener('dragleave', () => {
+      t.classList.remove('tile-dragover');
+    });
+
+    t.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      t.classList.remove('tile-dragover');
+      const source = window._phantomDragSource;
+      if (!source || source.id === item.id) return;
+
+      const fromIdx = source.index;
+      const toIdx = i;
+      const reordered = [...items];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
+
+      const orderUpdates = reordered.map((it, idx) => ({
+        id: it.id,
+        sort_order: idx + 1
+      }));
+
+      // Optimistic re-render
+      renderTiles(grid, reordered, parentId, type);
+
+      try {
+        await updateWorkspaceOrders(window._phantomUser.id, orderUpdates);
+      } catch (err) {
+        toast('Reorder failed: ' + err.message, 'error');
+        if (type === 'workspace') loadWorkspaces();
+        else {
+          const m = await getWorkspaces(window._phantomUser.id, parentId);
+          renderTiles(document.getElementById('modulesGrid'), m, parentId, 'module');
+        }
+      }
+    });
+
     grid.appendChild(t);
   });
 
   // Add tile
   const add = document.createElement('div');
   add.className = 'tile tile-add';
+  add.draggable = false;
   add.addEventListener('click', () => openAddModal(parentId, type));
   add.innerHTML = `<div class="tile-add-icon">+</div><div class="tile-add-text">New ${type === 'workspace' ? 'Workspace' : 'Module'}</div>`;
   grid.appendChild(add);
 }
 
-// ==================== MODAL ====================
+// ==================== ADD MODAL ====================
 
 export function openAddModal(parentId, type) {
   addCtx = { parentId, type };
@@ -179,6 +289,67 @@ async function submitAdd() {
   }
 }
 
+// ==================== EDIT MODAL ====================
+
+export function openEditModal(item, type, parentId) {
+  editCtx = { id: item.id, parentId, type, item };
+  editSelEmoji = item.emoji || '\uD83D\uDCDA';
+  document.getElementById('modalEditTitle').textContent = type === 'workspace' ? 'EDIT WORKSPACE' : 'EDIT MODULE';
+  document.getElementById('editName').value = item.name || '';
+  document.getElementById('editDesc').value = item.description || '';
+  renderEditEmojiGrid();
+  document.getElementById('modalEdit').classList.add('open');
+}
+
+function renderEditEmojiGrid() {
+  const grid = document.getElementById('editEmojiGrid');
+  grid.innerHTML = '';
+  EMOJIS.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'emoji-pick' + (e === editSelEmoji ? ' selected' : '');
+    div.textContent = e;
+    div.addEventListener('click', () => {
+      editSelEmoji = e;
+      renderEditEmojiGrid();
+    });
+    grid.appendChild(div);
+  });
+}
+
+async function submitEdit() {
+  const name = document.getElementById('editName').value.trim();
+  const desc = document.getElementById('editDesc').value.trim();
+  if (!name) { toast('Enter a name', 'error'); return; }
+  try {
+    await updateWorkspace(editCtx.id, window._phantomUser.id, {
+      name, emoji: editSelEmoji, description: desc
+    });
+    closeModal('modalEdit');
+    toast('Updated!', 'success');
+
+    if (editCtx.type === 'workspace') {
+      loadWorkspaces();
+      // Update workspace header if currently open
+      if (window._phantomCurrentWsId === editCtx.id) {
+        const wsEm = document.getElementById('wsEmoji');
+        const wsT = document.getElementById('wsTitle');
+        const wsD = document.getElementById('wsDesc');
+        if (wsEm) wsEm.textContent = editSelEmoji;
+        if (wsT) wsT.textContent = name;
+        if (wsD) wsD.textContent = desc;
+        if (window._phantomWsPath?.length) {
+          window._phantomWsPath[0] = { ...window._phantomWsPath[0], name, emoji: editSelEmoji };
+        }
+      }
+    } else {
+      const m = await getWorkspaces(window._phantomUser.id, editCtx.parentId);
+      renderTiles(document.getElementById('modulesGrid'), m, editCtx.parentId, 'module');
+    }
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
@@ -186,27 +357,21 @@ function closeModal(id) {
 // ==================== SAMPLE WORKSPACE ====================
 
 async function createSampleIfNeeded(user) {
-  // Check user metadata first — persists across ALL browsers and devices
   if (user.user_metadata?.sample_created) return;
-  // Fallback: check localStorage for the current browser
   if (localStorage.getItem('phantom-sample-created-' + user.id)) return;
 
   try {
-    // Also check DB in case metadata update failed previously
     const existing = await getWorkspaces(user.id, null);
     if (existing.length > 0) {
-      // User already has workspaces — mark done and skip
       localStorage.setItem('phantom-sample-created-' + user.id, '1');
       markSampleCreated().catch(() => {});
       return;
     }
 
-    // Create sample workspace
-    const ws  = await createWorkspace('Biology 101 (Sample)', '\uD83E\uDDEC', 'Sample workspace — feel free to delete it!', null, user.id);
+    const ws  = await createWorkspace('Biology 101 (Sample)', '\uD83E\uDDEC', 'Sample workspace \u2014 feel free to delete it!', null, user.id);
     const mod = await createWorkspace('Cell Biology', '\uD83E\uDDA0', 'Introduction to cell structure', ws.id, user.id);
     await saveModuleData(mod.id, user.id, SAMPLE_FLASHCARDS, SAMPLE_QUIZ, SAMPLE_FILLIN);
 
-    // Persist flag in user metadata (survives new browsers) and localStorage
     await markSampleCreated();
     localStorage.setItem('phantom-sample-created-' + user.id, '1');
 

@@ -78,6 +78,49 @@
   </div>
 </div>
 
+<!-- MODAL: EDIT WORKSPACE/MODULE -->
+<div class="modal-overlay" id="modalEdit">
+  <div class="modal">
+    <button class="modal-close" id="modalEditClose">&#10005;</button>
+    <div class="modal-title" id="modalEditTitle">EDIT WORKSPACE</div>
+    <div class="emoji-grid" id="editEmojiGrid"></div>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input type="text" class="form-input" id="editName" placeholder="e.g. Biology 101" maxlength="50">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description (optional)</label>
+      <input type="text" class="form-input" id="editDesc" placeholder="Short description..." maxlength="100">
+    </div>
+    <button class="btn-primary" id="btnSubmitEdit">SAVE CHANGES</button>
+  </div>
+</div>
+
+<!-- MODAL: USER PROFILE -->
+<div class="modal-overlay" id="modalProfile">
+  <div class="modal">
+    <button class="modal-close" id="modalProfileClose">&#10005;</button>
+    <div class="modal-title">YOUR PROFILE</div>
+    <div class="profile-avatar-section">
+      <div class="profile-avatar-preview" id="profileAvatarPreview">
+        <span class="profile-avatar-placeholder">?</span>
+      </div>
+      <label class="btn-ghost profile-avatar-btn" for="profileAvatarInput">CHANGE PHOTO</label>
+      <input type="file" id="profileAvatarInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Username</label>
+      <input type="text" class="form-input" id="profileUsername" placeholder="Letters only, 3-20 chars" maxlength="20">
+      <div class="profile-username-hint" id="profileUsernameHint"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <div class="profile-email" id="profileEmail"></div>
+    </div>
+    <button class="btn-primary" id="btnSaveProfile">SAVE PROFILE</button>
+  </div>
+</div>
+
 <!-- TUTORIAL OVERLAY (populated by JS) -->
 <div class="tutorial-overlay" id="tutorialOverlay"></div>
 
@@ -343,8 +386,10 @@
   <nav class="topnav">
     <div class="nav-logo" id="dashLogo">PHANTOM STUDY</div>
     <div class="nav-right">
+      <button class="btn-comm" id="btnCommunityDash">COMMUNITY</button>
       <button class="btn-ghost btn-help-tour" id="btnTourDash" title="Take a tour">?</button>
       <span class="nav-theme-slot" id="themeSlotDash"></span>
+      <div class="nav-avatar" id="navAvatarDash"></div>
       <span class="nav-user" id="navUser"></span>
       <button class="btn-ghost" id="btnLogoutDash">SIGN OUT</button>
     </div>
@@ -367,7 +412,9 @@
   <nav class="topnav">
     <div class="nav-logo" id="wsLogo">PHANTOM STUDY</div>
     <div class="nav-right">
+      <button class="btn-comm" id="btnCommunityWs">COMMUNITY</button>
       <span class="nav-theme-slot" id="themeSlotWs"></span>
+      <div class="nav-avatar" id="navAvatarWs"></div>
       <span class="nav-user" id="navUser2"></span>
       <button class="btn-ghost" id="btnLogoutWs">SIGN OUT</button>
     </div>
@@ -566,6 +613,40 @@
     <div class="nav-right"><button class="btn-ghost" id="btnBackFromFill">&larr; MODULE</button></div>
   </nav>
   <div class="fillin-container" id="fillinContainer"></div>
+</div>
+
+<!-- ============================================================
+     COMMUNITY
+============================================================ -->
+<div class="page" id="page-community">
+  <nav class="topnav">
+    <div class="nav-logo" id="commLogo">PHANTOM STUDY</div>
+    <div class="nav-right">
+      <button class="btn-ghost" id="btnBackFromComm">&larr; DASHBOARD</button>
+    </div>
+  </nav>
+  <div class="comm-header">
+    <div class="comm-title">COMMUNITY <span>HUB</span></div>
+    <div class="comm-sub">Share your study sets and discover content from other students</div>
+  </div>
+  <div class="comm-controls">
+    <div class="comm-search-wrap">
+      <input type="text" class="form-input comm-search" id="commSearch" placeholder="Search study sets...">
+    </div>
+    <div class="comm-filters">
+      <button class="tab-btn active" id="commFilterAll">All</button>
+      <button class="tab-btn" id="commFilterWs">Workspaces</button>
+      <button class="tab-btn" id="commFilterMod">Modules</button>
+    </div>
+    <div class="comm-sort">
+      <button class="tab-btn active" id="commSortVotes">Top Voted</button>
+      <button class="tab-btn" id="commSortNew">Newest</button>
+    </div>
+  </div>
+  <div class="comm-grid" id="commGrid"></div>
+  <div class="comm-load-more" id="commLoadMore" style="display:none">
+    <button class="btn-ghost" id="btnLoadMore">LOAD MORE</button>
+  </div>
 </div>
 
 </body>

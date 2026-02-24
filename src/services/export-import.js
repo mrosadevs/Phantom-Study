@@ -3,30 +3,67 @@
 import { getWorkspaces, getModuleData, createWorkspace, saveModuleData, getWorkspaceById } from './supabase.js';
 import { toast } from '../utils/helpers.js';
 
+// ==================== DATA BUILDERS ====================
+
+export async function buildModuleExportData(modId, userId) {
+  const [wsData, data] = await Promise.all([
+    getWorkspaceById(modId),
+    getModuleData(modId, userId),
+  ]);
+  return {
+    type: 'phantom-module',
+    version: 1,
+    name: wsData?.name || 'Module',
+    emoji: wsData?.emoji || '\uD83D\uDCDD',
+    description: wsData?.description || '',
+    data: {
+      flashcards: data?.flashcards || [],
+      quiz:       data?.quiz       || [],
+      fillin:     data?.fillin     || [],
+    },
+    exported_at: new Date().toISOString(),
+  };
+}
+
+export async function buildWorkspaceExportData(wsId, userId) {
+  const [ws, modules] = await Promise.all([
+    getWorkspaceById(wsId),
+    getWorkspaces(userId, wsId),
+  ]);
+
+  const modulesWithData = await Promise.all(
+    modules.map(async mod => {
+      const data = await getModuleData(mod.id, userId);
+      return {
+        name:        mod.name,
+        emoji:       mod.emoji       || '\uD83D\uDCDD',
+        description: mod.description || '',
+        data: {
+          flashcards: data?.flashcards || [],
+          quiz:       data?.quiz       || [],
+          fillin:     data?.fillin     || [],
+        },
+      };
+    })
+  );
+
+  return {
+    type: 'phantom-workspace',
+    version: 1,
+    name:        ws?.name        || 'Workspace',
+    emoji:       ws?.emoji       || '\uD83D\uDCDA',
+    description: ws?.description || '',
+    modules: modulesWithData,
+    exported_at: new Date().toISOString(),
+  };
+}
+
 // ==================== EXPORT ====================
 
 export async function exportModule(modId, modName, userId) {
   try {
     toast('Preparing export...', 'info');
-    const [wsData, data] = await Promise.all([
-      getWorkspaceById(modId),
-      getModuleData(modId, userId),
-    ]);
-
-    const exportObj = {
-      type: 'phantom-module',
-      version: 1,
-      name: modName || wsData?.name || 'Module',
-      emoji: wsData?.emoji || '📝',
-      description: wsData?.description || '',
-      data: {
-        flashcards: data?.flashcards || [],
-        quiz:       data?.quiz       || [],
-        fillin:     data?.fillin     || [],
-      },
-      exported_at: new Date().toISOString(),
-    };
-
+    const exportObj = await buildModuleExportData(modId, userId);
     downloadJSON(exportObj, `phantom-module-${slugify(exportObj.name)}.json`);
     toast('Module exported!', 'success');
   } catch (e) {
@@ -37,39 +74,9 @@ export async function exportModule(modId, modName, userId) {
 export async function exportWorkspace(wsId, userId) {
   try {
     toast('Exporting workspace...', 'info');
-    const [ws, modules] = await Promise.all([
-      getWorkspaceById(wsId),
-      getWorkspaces(userId, wsId),
-    ]);
-
-    const modulesWithData = await Promise.all(
-      modules.map(async mod => {
-        const data = await getModuleData(mod.id, userId);
-        return {
-          name:        mod.name,
-          emoji:       mod.emoji       || '📝',
-          description: mod.description || '',
-          data: {
-            flashcards: data?.flashcards || [],
-            quiz:       data?.quiz       || [],
-            fillin:     data?.fillin     || [],
-          },
-        };
-      })
-    );
-
-    const exportObj = {
-      type: 'phantom-workspace',
-      version: 1,
-      name:        ws?.name        || 'Workspace',
-      emoji:       ws?.emoji       || '📚',
-      description: ws?.description || '',
-      modules: modulesWithData,
-      exported_at: new Date().toISOString(),
-    };
-
+    const exportObj = await buildWorkspaceExportData(wsId, userId);
     downloadJSON(exportObj, `phantom-workspace-${slugify(exportObj.name)}.json`);
-    toast(`Exported with ${modulesWithData.length} module(s)!`, 'success');
+    toast(`Exported with ${exportObj.modules.length} module(s)!`, 'success');
   } catch (e) {
     toast('Export failed: ' + e.message, 'error');
   }
@@ -82,7 +89,7 @@ export async function importModule(jsonData, parentWsId, userId) {
 
   const mod = await createWorkspace(
     jsonData.name        || 'Imported Module',
-    jsonData.emoji       || '📝',
+    jsonData.emoji       || '\uD83D\uDCDD',
     jsonData.description || '',
     parentWsId,
     userId
@@ -98,7 +105,7 @@ export async function importWorkspace(jsonData, userId) {
 
   const ws = await createWorkspace(
     jsonData.name        || 'Imported Workspace',
-    jsonData.emoji       || '📚',
+    jsonData.emoji       || '\uD83D\uDCDA',
     jsonData.description || '',
     null,
     userId
@@ -107,7 +114,7 @@ export async function importWorkspace(jsonData, userId) {
   for (const mod of (jsonData.modules || [])) {
     const modRecord = await createWorkspace(
       mod.name        || 'Module',
-      mod.emoji       || '📝',
+      mod.emoji       || '\uD83D\uDCDD',
       mod.description || '',
       ws.id,
       userId

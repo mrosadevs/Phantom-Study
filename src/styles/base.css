@@ -93,6 +93,15 @@ body::after {
   66% { transform: translate(-20px, 20px) scale(0.95); }
 }
 
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(0,212,255,0); border-color: var(--border); }
+  50% { box-shadow: 0 0 18px rgba(0,212,255,0.2); border-color: var(--accent4); }
+}
+@keyframes textShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
 /* SCROLL REVEAL */
 .reveal { opacity: 1; transform: translateY(0); }
 .reveal.visible { opacity: 1; transform: translateY(0); }

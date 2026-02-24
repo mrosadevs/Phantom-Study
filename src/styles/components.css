@@ -1,0 +1,200 @@
+/* ============================================================
+   COMPONENTS — Modal, Toast, Forms, Disclaimer, Tutorial
+============================================================ */
+
+/* FORMS */
+.form-group { margin-bottom: 1.2rem; }
+.form-label {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.2em; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 0.45rem;
+}
+.form-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.85rem 1rem;
+  color: var(--text); font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+}
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,255,0,0.08); }
+
+/* BUTTONS */
+.btn-primary {
+  width: 100%; padding: 0.9rem; background: var(--accent);
+  border: none; border-radius: 10px; color: #000;
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 0.92rem; letter-spacing: 0.12em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: var(--glow-lime); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* SPINNER */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.spinner-light { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(10px);
+  z-index: 1000; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 2rem; width: 100%; max-width: 440px;
+  position: relative; animation: scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.modal::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent4), var(--accent2));
+  border-radius: 20px 20px 0 0;
+}
+.modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; margin-bottom: 1.5rem; }
+.modal-close {
+  position: absolute; top: 1rem; right: 1rem;
+  background: transparent; border: none; color: var(--muted);
+  font-size: 1.1rem; cursor: pointer; transition: color 0.2s;
+}
+.modal-close:hover { color: var(--accent3); }
+
+.emoji-grid { display: grid; grid-template-columns: repeat(8,1fr); gap: 0.35rem; margin-bottom: 1rem; }
+.emoji-pick {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 7px; font-size: 1.1rem; padding: 0.3rem;
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.emoji-pick:hover { background: var(--border); transform: scale(1.2); }
+.emoji-pick.selected { border-color: var(--accent); background: rgba(200,255,0,0.08); }
+
+/* DISCLAIMER */
+.disclaimer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(14px); z-index: 2000;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.disclaimer-box {
+  background: var(--surface); border: 1px solid var(--accent);
+  border-radius: 24px; padding: 2.5rem; max-width: 500px; width: 100%;
+  text-align: center; position: relative;
+  box-shadow: 0 0 80px rgba(200,255,0,0.15);
+  animation: scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.disclaimer-logo {
+  font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem;
+  background: linear-gradient(120deg, var(--accent), var(--accent4));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 0.5rem;
+}
+.disclaimer-title {
+  font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800;
+  color: var(--accent4); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 1rem;
+}
+.disclaimer-text {
+  font-size: 1rem; color: var(--text); line-height: 1.85;
+  margin-bottom: 1.5rem; opacity: 0.9;
+}
+.disclaimer-text strong { color: var(--accent); font-weight: 600; }
+
+.btn-disclaimer-dismiss {
+  background: var(--accent); color: #000; border: none;
+  border-radius: 12px; padding: 0.9rem 2.5rem;
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 1rem; letter-spacing: 0.08em;
+  cursor: pointer; transition: all 0.2s; margin-top: 0.5rem;
+}
+.btn-disclaimer-dismiss:hover { transform: translateY(-2px); box-shadow: var(--glow-lime); }
+
+/* TOAST */
+.toast-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 9000; display: flex; flex-direction: column; gap: 0.4rem; }
+.toast {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.7rem 1.1rem;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  animation: slideInR 0.3s cubic-bezier(0.34,1.56,0.64,1) both; max-width: 280px;
+}
+.toast.success { border-color: var(--accent); color: var(--accent); }
+.toast.error { border-color: var(--accent3); color: var(--accent3); }
+.toast.info { border-color: var(--accent2); color: var(--accent2); }
+
+/* THEME TOGGLE (inline in nav) */
+.nav-theme-slot { display: inline-flex; align-items: center; }
+.theme-toggle {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.3s;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--accent); transform: scale(1.1); background: var(--surface); }
+
+/* KO-FI */
+.kofi-float {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 500;
+  filter: drop-shadow(0 4px 20px rgba(114,164,242,0.5));
+  animation: fadeUp 0.8s 1s cubic-bezier(0.16,1,0.3,1) both;
+}
+.kofi-inline { display: flex; justify-content: center; margin: 1.2rem 0 0; }
+
+/* TUTORIAL */
+.tutorial-overlay {
+  display: none; position: fixed; inset: 0;
+  z-index: 3000; padding: 1rem;
+}
+.tutorial-overlay.open { display: block; }
+
+/* Spotlight cutout */
+.tutorial-spotlight {
+  position: absolute; border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.75);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 3001; pointer-events: none;
+}
+.tutorial-spotlight::after {
+  content: ''; position: absolute; inset: -4px;
+  border: 2px solid var(--accent); border-radius: 14px;
+  animation: spotlightPulse 1.5s ease-in-out infinite;
+}
+@keyframes spotlightPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Tutorial tooltip card */
+.tutorial-card {
+  position: absolute; z-index: 3002;
+  background: var(--surface); border: 1px solid var(--accent);
+  border-radius: 16px; padding: 1.8rem; max-width: 380px; width: 90%;
+  text-align: left;
+  animation: scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.tutorial-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent4), var(--accent2));
+  border-radius: 16px 16px 0 0;
+}
+.tutorial-step-indicator {
+  display: flex; gap: 0.4rem; margin-bottom: 1rem;
+}
+.tutorial-step-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border2); transition: background 0.3s;
+}
+.tutorial-step-dot.active { background: var(--accent); }
+.tutorial-step-dot.done { background: var(--accent4); }
+.tutorial-step-count {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+  color: var(--muted); letter-spacing: 0.1em; margin-bottom: 0.5rem;
+}
+.tutorial-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem;
+  letter-spacing: 0.04em; margin-bottom: 0.5rem;
+}
+.tutorial-desc {
+  font-size: 0.9rem; color: var(--muted2); line-height: 1.7; margin-bottom: 1.5rem;
+}
+.tutorial-actions { display: flex; gap: 0.8rem; justify-content: flex-end; }
+.tutorial-next { max-width: 140px; padding: 0.6rem 1.2rem; font-size: 0.8rem; }
+.btn-ghost { padding: 0.5rem 1rem; }

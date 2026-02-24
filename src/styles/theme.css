@@ -1,0 +1,83 @@
+/* ============================================================
+   LIGHT MODE OVERRIDES
+============================================================ */
+[data-theme="light"] {
+  --bg: #f5f5f8;
+  --surface: #ffffff;
+  --surface2: #eeeef2;
+  --border: #d8d8e0;
+  --border2: #c8c8d4;
+  --accent: #6b9900;
+  --accent2: #6200ea;
+  --accent3: #e0225a;
+  --accent4: #0098cc;
+  --text: #1a1a2e;
+  --muted: #8888a0;
+  --muted2: #666680;
+  --glow-lime: 0 0 30px rgba(107,153,0,0.2);
+  --glow-violet: 0 0 30px rgba(98,0,234,0.2);
+  --glow-pink: 0 0 30px rgba(224,34,90,0.2);
+}
+
+/* Override noise opacity in light mode */
+[data-theme="light"] body::after { opacity: 0.15; }
+
+/* Scrollbar in light mode */
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--bg); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* Nav backgrounds */
+[data-theme="light"] .land-nav { background: rgba(245,245,248,0.85); }
+[data-theme="light"] .topnav { background: rgba(245,245,248,0.92); }
+
+/* Cursor blend mode fix for light mode */
+[data-theme="light"] .cursor { mix-blend-mode: multiply; background: var(--accent); }
+
+/* Card backgrounds need slightly different shadows */
+[data-theme="light"] .tile { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+[data-theme="light"] .tile:hover { box-shadow: 0 8px 24px rgba(98,0,234,0.12); }
+
+/* Orbs more subtle in light mode */
+[data-theme="light"] .orb-1 { opacity: 0.4; }
+[data-theme="light"] .orb-2 { opacity: 0.3; }
+[data-theme="light"] .orb-3 { opacity: 0.3; }
+
+/* Hero title fix for light mode */
+[data-theme="light"] .hero-title .line1 { color: var(--text); }
+
+/* Login card */
+[data-theme="light"] .login-card { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+[data-theme="light"] .login-logo { filter: drop-shadow(0 0 20px rgba(107,153,0,0.25)); }
+
+/* Disclaimer */
+[data-theme="light"] .disclaimer-overlay { background: rgba(255,255,255,0.85); }
+[data-theme="light"] .disclaimer-box { box-shadow: 0 8px 40px rgba(0,0,0,0.15); border-color: var(--accent); }
+
+/* Button text colors */
+[data-theme="light"] .btn-primary { color: #fff; }
+[data-theme="light"] .btn-hero-primary { color: #fff; }
+[data-theme="light"] .btn-nav-cta { color: #fff; }
+[data-theme="light"] .btn-disclaimer-dismiss { color: #fff; }
+[data-theme="light"] .btn-knew { color: #fff; }
+
+/* Google button */
+[data-theme="light"] .btn-google { background: #fff; border-color: var(--border); color: var(--text); }
+
+/* Toast */
+[data-theme="light"] .toast { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+
+/* Feature icons */
+[data-theme="light"] .feature-icon.lime { background: rgba(107,153,0,0.08); border-color: rgba(107,153,0,0.2); }
+
+/* Flashcard faces */
+[data-theme="light"] .flashcard-face { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
+/* Quiz choice */
+[data-theme="light"] .quiz-choice { box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+
+/* Model selector */
+[data-theme="light"] .model-option { box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+
+/* Theme toggle in light mode */
+[data-theme="light"] .theme-toggle { background: #fff; border-color: var(--border); }
+[data-theme="light"] .theme-toggle:hover { background: var(--surface2); }

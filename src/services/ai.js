@@ -1,4 +1,4 @@
-// AI service — handles Gemini and Kimi API calls
+// AI service — handles Gemini and Kimi API calls (v1.1)
 
 // Get the selected model from localStorage
 export function getSelectedModel() {

@@ -3,7 +3,7 @@ import { callAI, getPrompt, parseFlash, parseQuiz, parseFill, parseAll, getSelec
 import { exportModule, importModule, pickJSONFile } from '../services/export-import.js';
 import { parseFile } from '../services/file-parser.js';
 import { showPage, esc, escA, toast } from '../utils/helpers.js';
-import { updateBreadcrumb } from './workspace.js';
+import { updateBreadcrumb, openWorkspace } from './workspace.js';
 import { startFlash } from './flashcards.js';
 import { startQuiz } from './quiz.js';
 import { startFill } from './fillin.js';
@@ -46,6 +46,12 @@ export function initModule() {
 
   document.getElementById('fileUpload')?.addEventListener('change', e => {
     if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  // Back to workspace
+  document.getElementById('btnBackToWorkspace')?.addEventListener('click', () => {
+    const ws = window._phantomWsPath?.[0];
+    if (ws) openWorkspace(ws);
   });
 
   // Generate buttons

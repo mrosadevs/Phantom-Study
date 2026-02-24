@@ -1,6 +1,7 @@
-import { signInWithEmail, signUpWithEmail, signOut } from '../services/supabase.js';
+import { signInWithEmail, signUpWithEmail, signOut, checkUsernameAvailable } from '../services/supabase.js';
 import { showPage, toast } from '../utils/helpers.js';
 import { onLogin } from './dashboard.js';
+import { validateUsername } from '../utils/profanity.js';
 
 export function initAuth() {
   // Tab switching
@@ -15,6 +16,27 @@ export function initAuth() {
 
   // Back to home
   document.getElementById('backToHome')?.addEventListener('click', () => showPage('landing'));
+
+  // Live username validation on signup
+  let usernameTimeout;
+  document.getElementById('signupUsername')?.addEventListener('input', () => {
+    clearTimeout(usernameTimeout);
+    usernameTimeout = setTimeout(async () => {
+      const username = document.getElementById('signupUsername').value.trim();
+      const hint = document.getElementById('signupUsernameHint');
+      if (!username) { hint.textContent = ''; hint.className = 'profile-username-hint'; return; }
+      const { valid, error } = validateUsername(username);
+      if (!valid) { hint.textContent = error; hint.className = 'profile-username-hint error'; return; }
+      const available = await checkUsernameAvailable(username);
+      if (available) {
+        hint.textContent = 'Available!';
+        hint.className = 'profile-username-hint success';
+      } else {
+        hint.textContent = 'Username taken';
+        hint.className = 'profile-username-hint error';
+      }
+    }, 400);
+  });
 
   // Enter key on login page
   document.addEventListener('keydown', e => {
@@ -50,14 +72,25 @@ async function handleLogin() {
 }
 
 async function handleSignup() {
+  const username = document.getElementById('signupUsername').value.trim();
   const em = document.getElementById('signupEmail').value.trim();
   const pw = document.getElementById('signupPassword').value;
-  if (!em || !pw) { setAuthErr('Fill in all fields'); return; }
+  if (!username || !em || !pw) { setAuthErr('Fill in all fields'); return; }
   if (pw.length < 6) { setAuthErr('Password must be 6+ characters'); return; }
+
+  // Validate username
+  const { valid, error } = validateUsername(username);
+  if (!valid) { setAuthErr(error); return; }
+
+  // Check username availability
+  const available = await checkUsernameAvailable(username);
+  if (!available) { setAuthErr('Username is already taken'); return; }
 
   setBtnLoad('btnSignup', 'signupBtnText', true, 'signup');
   try {
     await signUpWithEmail(em, pw);
+    // Store username for after email confirmation + first login
+    localStorage.setItem('phantom-pending-username', username);
     toast('Check your email to confirm your account!', 'success');
     switchTab('login');
   } catch (error) {

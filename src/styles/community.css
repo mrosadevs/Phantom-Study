@@ -141,8 +141,16 @@
 }
 
 @media (max-width: 768px) {
-  .comm-controls { flex-direction: column; }
+  .comm-header { padding: 1.2rem 1rem 0.3rem; }
+  .comm-title { font-size: clamp(2rem, 5vw, 3rem); }
+  .comm-sub { font-size: 0.65rem; }
+  .comm-controls { flex-direction: column; padding: 0.8rem 1rem; gap: 0.6rem; }
   .comm-search-wrap { width: 100%; }
   .comm-search { max-width: 100%; }
-  .comm-grid { grid-template-columns: 1fr; padding: 1rem; }
+  .comm-filters, .comm-sort { justify-content: center; }
+  .comm-grid { grid-template-columns: 1fr; padding: 0.8rem 1rem; gap: 0.8rem; }
+  .comm-card { padding: 1.2rem; border-radius: 12px; }
+  .comm-card-emoji { font-size: 1.6rem; }
+  .comm-card-title { font-size: 1rem; }
+  .comm-card-footer { flex-wrap: wrap; gap: 0.5rem; }
 }

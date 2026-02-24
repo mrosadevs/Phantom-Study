@@ -13,6 +13,11 @@ let editSelEmoji = '\uD83D\uDCDA';
 let editCtx = { id: null, parentId: null, type: 'workspace', item: null };
 
 export function initDashboard() {
+  // Close tile dropdowns when clicking anywhere outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.tile-dropdown.open').forEach(d => d.classList.remove('open'));
+  });
+
   // Logout buttons
   document.getElementById('btnLogoutDash')?.addEventListener('click', handleLogout);
   document.getElementById('btnLogoutWs')?.addEventListener('click', handleLogout);
@@ -72,13 +77,18 @@ export async function onLogin(u) {
   document.querySelectorAll('.nav-user').forEach(el => { el.textContent = u.email; });
 
   // Load user profile (username + avatar)
-  await loadProfileForNav(u.id);
+  const needsSetup = await loadProfileForNav(u.id);
 
   loadWorkspaces();
   showPage('dashboard');
 
   // Create sample workspace for first-time users
   createSampleIfNeeded(u);
+
+  // Prompt first-time users to set up their profile (username + PFP)
+  if (needsSetup) {
+    setTimeout(() => openProfileModal(true), 600);
+  }
 }
 
 export function goToDashboard() {
@@ -111,67 +121,75 @@ export function renderTiles(grid, items, parentId, type) {
     t.style.animationDelay = (i * 0.07) + 's';
     const isSample = item.name === 'Biology 101 (Sample)';
     t.innerHTML = `
-      <button class="tile-delete" data-id="${item.id}" data-type="${type}" data-parent="${parentId || ''}">&#10005;</button>
-      <button class="tile-edit" data-id="${item.id}" title="Edit">&#9998;</button>
-      <button class="tile-share" data-id="${item.id}" title="Share to community">&#9757;</button>
-      ${type === 'workspace' ? `<button class="tile-export" data-id="${item.id}" title="Export as .json">&#11015;</button>` : ''}
+      <div class="tile-menu-wrap">
+        <button class="tile-menu-btn" title="Options">&#8942;</button>
+        <div class="tile-dropdown">
+          <button class="tile-drop-item" data-action="edit"><span class="tile-drop-icon">&#9998;</span> Rename</button>
+          <button class="tile-drop-item" data-action="share"><span class="tile-drop-icon">&#9757;</span> Share</button>
+          ${type === 'workspace' ? '<button class="tile-drop-item" data-action="export"><span class="tile-drop-icon">&#11015;</span> Export</button>' : ''}
+          <button class="tile-drop-item tile-drop-danger" data-action="delete"><span class="tile-drop-icon">&#10005;</span> Delete</button>
+        </div>
+      </div>
       <span class="tile-icon">${item.emoji || '\uD83D\uDCDA'}</span>
       <div class="tile-name">${esc(item.name)}</div>
       <div class="tile-meta">${item.description ? esc(item.description) : (type === 'workspace' ? 'Workspace' : 'Study Module')}</div>
       ${isSample ? '<div class="tile-badge">SAMPLE</div>' : ''}
       <div class="tile-glow"></div>`;
 
-    // Export handler (workspace tiles only)
-    t.querySelector('.tile-export')?.addEventListener('click', async (e) => {
+    // 3-dot menu toggle
+    const menuBtn = t.querySelector('.tile-menu-btn');
+    const dropdown = t.querySelector('.tile-dropdown');
+    menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      await exportWorkspace(item.id, window._phantomUser.id);
+      // Close any other open dropdowns first
+      document.querySelectorAll('.tile-dropdown.open').forEach(d => {
+        if (d !== dropdown) d.classList.remove('open');
+      });
+      dropdown.classList.toggle('open');
     });
 
-    // Edit handler
-    t.querySelector('.tile-edit')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openEditModal(item, type, parentId);
-    });
+    // Dropdown action handlers
+    t.querySelectorAll('.tile-drop-item').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        dropdown.classList.remove('open');
+        const action = btn.dataset.action;
 
-    // Share handler
-    t.querySelector('.tile-share')?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      try {
-        toast('Preparing share...', 'info');
-        let exportData;
-        if (type === 'workspace') {
-          exportData = await buildWorkspaceExportData(item.id, window._phantomUser.id);
-        } else {
-          exportData = await buildModuleExportData(item.id, window._phantomUser.id);
+        if (action === 'edit') {
+          openEditModal(item, type, parentId);
+        } else if (action === 'share') {
+          try {
+            toast('Preparing share...', 'info');
+            let exportData;
+            if (type === 'workspace') {
+              exportData = await buildWorkspaceExportData(item.id, window._phantomUser.id);
+            } else {
+              exportData = await buildModuleExportData(item.id, window._phantomUser.id);
+            }
+            await shareItemToComm(exportData, item.name, item.emoji, item.description, type);
+          } catch (err) {
+            toast('Share failed: ' + err.message, 'error');
+          }
+        } else if (action === 'export') {
+          await exportWorkspace(item.id, window._phantomUser.id);
+        } else if (action === 'delete') {
+          if (!confirm('Delete this ' + type + '? All data inside will be lost.')) return;
+          await deleteWorkspace(item.id, window._phantomUser.id);
+          toast('Deleted!', 'success');
+          if (type === 'workspace') loadWorkspaces();
+          else {
+            const m = await getWorkspaces(window._phantomUser.id, parentId);
+            renderTiles(document.getElementById('modulesGrid'), m, parentId, 'module');
+          }
         }
-        await shareItemToComm(exportData, item.name, item.emoji, item.description, type);
-      } catch (err) {
-        toast('Share failed: ' + err.message, 'error');
-      }
+      });
     });
 
-    // Click handler
+    // Click handler — open workspace/module (skip if clicking menu)
     t.addEventListener('click', (e) => {
-      if (e.target.closest('.tile-delete')) return;
-      if (e.target.closest('.tile-export')) return;
-      if (e.target.closest('.tile-edit')) return;
-      if (e.target.closest('.tile-share')) return;
+      if (e.target.closest('.tile-menu-wrap')) return;
       if (type === 'workspace') openWorkspace(item);
       else openModule(item.id, item);
-    });
-
-    // Delete handler
-    t.querySelector('.tile-delete').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const btn = e.currentTarget;
-      if (!confirm('Delete this ' + type + '? All data inside will be lost.')) return;
-      await deleteWorkspace(btn.dataset.id, window._phantomUser.id);
-      toast('Deleted!', 'success');
-      if (type === 'workspace') loadWorkspaces();
-      else {
-        const m = await getWorkspaces(window._phantomUser.id, parentId);
-        renderTiles(document.getElementById('modulesGrid'), m, parentId, 'module');
-      }
     });
 
     // ---- DRAG & DROP ----

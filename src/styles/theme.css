@@ -81,3 +81,13 @@
 /* Theme toggle in light mode */
 [data-theme="light"] .theme-toggle { background: #fff; border-color: var(--border); }
 [data-theme="light"] .theme-toggle:hover { background: var(--surface2); }
+
+/* Tile dropdown menu */
+[data-theme="light"] .tile-menu-btn { background: rgba(255,255,255,0.7); }
+[data-theme="light"] .tile-menu-btn:hover { background: rgba(0,0,0,0.08); color: var(--text); }
+[data-theme="light"] .tile-dropdown { box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+[data-theme="light"] .tile-drop-item:hover { background: rgba(0,0,0,0.04); }
+
+/* Community */
+[data-theme="light"] .comm-card { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+[data-theme="light"] .comm-card:hover { box-shadow: 0 8px 24px rgba(0,152,204,0.12); }

@@ -94,3 +94,16 @@
   font-size: 1.1rem; color: var(--muted2);
   letter-spacing: 0.1em; text-transform: uppercase;
 }
+
+@media (max-width: 768px) {
+  .flashcard-container { padding: 1.2rem; gap: 1rem; }
+  .flashcard-wrapper { height: 260px; }
+  .flashcard-face { padding: 1.5rem; border-radius: 16px; }
+  .flashcard-nav { gap: 0.5rem; }
+  .btn-nav { padding: 0.5rem 1rem; font-size: 0.72rem; }
+  .btn-knew { padding: 0.5rem 1rem; }
+  .quiz-container { padding: 1.2rem; }
+  .fillin-container { padding: 1.2rem; }
+  .results-score { font-size: 5rem; }
+  .results-screen { padding: 2rem 1rem; }
+}

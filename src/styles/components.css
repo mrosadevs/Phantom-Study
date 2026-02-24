@@ -241,3 +241,30 @@
   transition: color 0.2s;
 }
 .nav-user-clickable:hover { color: var(--accent4); }
+
+@media (max-width: 768px) {
+  /* MODAL */
+  .modal { padding: 1.5rem; border-radius: 16px; max-width: 100%; }
+  .modal-title { font-size: 1.5rem; margin-bottom: 1rem; }
+  .emoji-grid { grid-template-columns: repeat(6, 1fr); gap: 0.3rem; }
+  .emoji-pick { font-size: 0.95rem; padding: 0.25rem; }
+
+  /* PROFILE */
+  .profile-avatar-preview { width: 64px; height: 64px; }
+  .profile-avatar-placeholder { font-size: 1.5rem; }
+  .profile-email { font-size: 0.65rem; }
+
+  /* TOAST */
+  .toast-container { bottom: 1rem; right: 1rem; left: 1rem; }
+  .toast { max-width: 100%; font-size: 0.68rem; }
+
+  /* DISCLAIMER */
+  .disclaimer-box { padding: 1.5rem; border-radius: 18px; }
+  .disclaimer-logo { font-size: 2.5rem; }
+  .disclaimer-text { font-size: 0.9rem; }
+
+  /* TUTORIAL */
+  .tutorial-card { padding: 1.2rem; max-width: 320px; }
+  .tutorial-title { font-size: 1.3rem; }
+  .tutorial-desc { font-size: 0.82rem; }
+}

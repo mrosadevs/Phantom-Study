@@ -79,19 +79,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tutorial (after pages are ready)
   initTutorial();
 
-  // Auth session check
-  getSession().then(session => {
-    if (session?.user) {
-      onLogin(session.user);
-      // Show tutorial after sign-in if first time
-      showFirstTimeTutorial();
-    }
-  });
+  // Auth session check — handle both fresh logins and OAuth redirects
+  let _loginHandled = false;
 
   onAuthStateChange((ev, session) => {
-    if (ev === 'SIGNED_IN' && session?.user) {
+    if (session?.user && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION')) {
+      if (_loginHandled) return;
+      _loginHandled = true;
       onLogin(session.user);
       showFirstTimeTutorial();
+    }
+    if (ev === 'SIGNED_OUT') {
+      _loginHandled = false;
     }
   });
 });

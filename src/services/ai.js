@@ -9,23 +9,33 @@ export function setSelectedModel(model) {
   localStorage.setItem('phantom-ai-model', model);
 }
 
-// Prompts
-function promptFlash(text) {
-  return `Generate exactly 15 flashcards from this content. Return ONLY a JSON array, no markdown:\n[{"front":"term","back":"definition"},...]\n\nContent:\n${text.slice(0, 6000)}`;
+// Prompts — exported so the manual import feature can show them
+export function promptFlash(text) {
+  return `Generate exactly 15 flashcards from this content. Return ONLY a JSON array, no markdown, no explanation:\n[{"front":"term","back":"definition"},...]\n\nContent:\n${text.slice(0, 6000)}`;
 }
 
-function promptQuiz(text) {
-  return `Generate exactly 10 multiple choice questions from this content. Return ONLY a JSON array, no markdown:\n[{"question":"...","choices":["A","B","C","D"],"answer":"A"},...]\nThe answer must exactly match one of the choices.\n\nContent:\n${text.slice(0, 6000)}`;
+export function promptQuiz(text) {
+  return `Generate exactly 10 multiple choice questions from this content. Return ONLY a JSON array, no markdown, no explanation:\n[{"question":"...","choices":["A","B","C","D"],"answer":"A"},...]\nThe answer must exactly match one of the choices.\n\nContent:\n${text.slice(0, 6000)}`;
 }
 
-function promptFill(text) {
-  return `Generate 10 fill-in-the-blank questions from this content. Use ___ for the blank. Return ONLY a JSON array, no markdown:\n[{"sentence":"The ___ is the...","answer":"word"},...]\n\nContent:\n${text.slice(0, 6000)}`;
+export function promptFill(text) {
+  return `Generate 10 fill-in-the-blank questions from this content. Use ___ for the blank. Return ONLY a JSON array, no markdown, no explanation:\n[{"sentence":"The ___ is the...","answer":"word"},...]\n\nContent:\n${text.slice(0, 6000)}`;
 }
 
 export function getPrompt(type, text) {
   if (type === 'flashcards') return promptFlash(text);
   if (type === 'quiz') return promptQuiz(text);
   return promptFill(text);
+}
+
+// Fetch with timeout helper
+function fetchWithTimeout(url, options, timeoutMs = 90000) {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out. The AI model is taking too long — try again or use a different model.')), timeoutMs)
+    ),
+  ]);
 }
 
 // Call the AI API based on selected model
@@ -35,11 +45,11 @@ export async function callAI(prompt, model) {
   // Try serverless function first (production)
   let serverlessError = null;
   try {
-    const res = await fetch('/api/generate', {
+    const res = await fetchWithTimeout('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, prompt }),
-    });
+    }, 120000);
     if (res.ok) {
       const data = await res.json();
       return data.text;
@@ -49,6 +59,7 @@ export async function callAI(prompt, model) {
     serverlessError = errData?.error || `Server error ${res.status}`;
     console.warn('Serverless API error:', serverlessError);
   } catch (e) {
+    if (e.message.includes('timed out')) throw e;
     console.warn('Serverless function unavailable, trying direct API');
   }
 
@@ -60,7 +71,12 @@ export async function callAI(prompt, model) {
     return await callGeminiDirect(prompt);
   } catch (directErr) {
     // If both serverless and direct fail, show the most helpful error
-    throw new Error(serverlessError || directErr.message);
+    const msg = serverlessError || directErr.message;
+    // Make quota errors more user-friendly
+    if (msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error('API quota exceeded. The free API key has hit its limit. Try the Kimi model instead, or use the "Import from ChatGPT" option below.');
+    }
+    throw new Error(msg);
   }
 }
 
@@ -70,14 +86,14 @@ async function callGeminiDirect(prompt) {
   if (!key) throw new Error('Gemini API key not configured');
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
     }),
-  });
+  }, 60000);
 
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
@@ -88,12 +104,12 @@ async function callGeminiDirect(prompt) {
   return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-// Direct Kimi API call (NVIDIA NIM)
+// Direct Kimi API call (NVIDIA NIM) — reasoning model, needs higher token budget
 async function callKimiDirect(prompt) {
   const key = import.meta.env.VITE_NVIDIA_API_KEY || '';
   if (!key) throw new Error('NVIDIA API key not configured. Add your Kimi API key in settings.');
 
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+  const res = await fetchWithTimeout('https://integrate.api.nvidia.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -103,9 +119,9 @@ async function callKimiDirect(prompt) {
       model: 'moonshotai/kimi-k2.5',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 4096,
+      max_tokens: 16384,
     }),
-  });
+  }, 120000);
 
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
@@ -113,18 +129,21 @@ async function callKimiDirect(prompt) {
   }
 
   const d = await res.json();
-  return d.choices?.[0]?.message?.content || '';
+  // Kimi is a reasoning model — content may be in `content` or `reasoning_content`
+  const msg = d.choices?.[0]?.message;
+  return msg?.content || msg?.reasoning_content || '';
 }
 
 // Parse JSON from AI response
 function parseJSON(raw) {
+  if (!raw || typeof raw !== 'string') throw new Error('Empty AI response');
   const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   try {
     return JSON.parse(clean);
   } catch (e) {
     const m = clean.match(/\[[\s\S]*\]/);
     if (m) return JSON.parse(m[0]);
-    throw new Error('Could not parse AI response');
+    throw new Error('Could not parse AI response as JSON');
   }
 }
 

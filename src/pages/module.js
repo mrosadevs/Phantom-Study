@@ -1,5 +1,5 @@
 import { getModuleData, saveModuleData, getWorkspaceById } from '../services/supabase.js';
-import { callAI, getPrompt, parseFlash, parseQuiz, parseFill, getSelectedModel, setSelectedModel } from '../services/ai.js';
+import { callAI, getPrompt, parseFlash, parseQuiz, parseFill, getSelectedModel, setSelectedModel, promptFlash, promptQuiz, promptFill } from '../services/ai.js';
 import { parseFile } from '../services/file-parser.js';
 import { showPage, esc, escA, toast } from '../utils/helpers.js';
 import { updateBreadcrumb } from './workspace.js';
@@ -68,6 +68,87 @@ export function initModule() {
 
   // Model selector
   initModelSelector();
+
+  // Import from ChatGPT/Claude
+  initImportSection();
+}
+
+// ==================== IMPORT FROM CHATGPT ====================
+
+let importType = 'flashcards';
+
+function initImportSection() {
+  const toggle = document.getElementById('btnImportToggle');
+  const panel = document.getElementById('importPanel');
+  if (!toggle || !panel) return;
+
+  toggle.addEventListener('click', () => {
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    updateImportPrompt();
+  });
+
+  // Import type tabs
+  const tabs = { impFlash: 'flashcards', impQuiz: 'quiz', impFill: 'fillin' };
+  Object.entries(tabs).forEach(([id, type]) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      importType = type;
+      Object.keys(tabs).forEach(tid => document.getElementById(tid).classList.toggle('active', tid === id));
+      updateImportPrompt();
+    });
+  });
+
+  // Copy prompt
+  document.getElementById('btnCopyPrompt')?.addEventListener('click', () => {
+    const text = document.getElementById('importPromptText').textContent;
+    navigator.clipboard.writeText(text).then(() => toast('Prompt copied!', 'success'))
+      .catch(() => toast('Copy failed — select and copy manually', 'error'));
+  });
+
+  // Import JSON
+  document.getElementById('btnImportJson')?.addEventListener('click', handleImportJson);
+}
+
+function updateImportPrompt() {
+  const el = document.getElementById('importPromptText');
+  if (!el) return;
+  const sampleContent = '[PASTE YOUR NOTES/CONTENT HERE]';
+  if (importType === 'flashcards') {
+    el.textContent = promptFlash(sampleContent);
+  } else if (importType === 'quiz') {
+    el.textContent = promptQuiz(sampleContent);
+  } else {
+    el.textContent = promptFill(sampleContent);
+  }
+}
+
+async function handleImportJson() {
+  const raw = document.getElementById('importJsonInput').value.trim();
+  if (!raw) { toast('Paste the JSON response first!', 'error'); return; }
+
+  try {
+    let parsed;
+    if (importType === 'flashcards') {
+      parsed = parseFlash(raw);
+      if (!parsed.length) throw new Error('No valid flashcards found');
+      modData.flashcards = parsed;
+    } else if (importType === 'quiz') {
+      parsed = parseQuiz(raw);
+      if (!parsed.length) throw new Error('No valid quiz questions found');
+      modData.quiz = parsed;
+    } else {
+      parsed = parseFill(raw);
+      if (!parsed.length) throw new Error('No valid fill-in questions found');
+      modData.fillin = parsed;
+    }
+
+    await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
+    updateCounts();
+    renderEditor();
+    document.getElementById('importJsonInput').value = '';
+    toast(`Imported ${parsed.length} ${importType}!`, 'success');
+  } catch (e) {
+    toast('Import error: ' + e.message, 'error');
+  }
 }
 
 function initModelSelector() {

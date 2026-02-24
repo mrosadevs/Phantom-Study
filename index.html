@@ -450,6 +450,31 @@
         <button class="btn-ai btn-ai-fillin" id="btnGenFill"><span>&#9999;&#65039;</span> FILL-IN</button>
       </div>
     </div>
+
+    <!-- IMPORT FROM CHATGPT/CLAUDE -->
+    <div class="import-section" id="importSection">
+      <button class="btn-import-toggle" id="btnImportToggle">
+        <span>&#129302;</span> API not working? Import from ChatGPT / Claude
+      </button>
+      <div class="import-panel" id="importPanel" style="display:none">
+        <p class="import-desc">Copy the prompt below, paste it into ChatGPT, Claude, or any AI chatbot along with your study notes. Then paste the JSON response back here.</p>
+        <div class="import-type-tabs">
+          <button class="tab-btn active" id="impFlash" style="flex:unset;padding:0.4rem 0.8rem">Flashcards</button>
+          <button class="tab-btn" id="impQuiz" style="flex:unset;padding:0.4rem 0.8rem">Quiz</button>
+          <button class="tab-btn" id="impFill" style="flex:unset;padding:0.4rem 0.8rem">Fill-In</button>
+        </div>
+        <div class="import-prompt-box">
+          <div class="import-prompt-label">COPY THIS PROMPT &darr;</div>
+          <pre class="import-prompt-text" id="importPromptText"></pre>
+          <button class="btn-ghost" id="btnCopyPrompt" style="margin-top:0.5rem">&#128203; COPY PROMPT</button>
+        </div>
+        <div style="margin-top:1rem">
+          <div class="import-prompt-label">PASTE JSON RESPONSE &darr;</div>
+          <textarea class="form-input" id="importJsonInput" rows="6" placeholder='Paste the JSON array from ChatGPT/Claude here...'></textarea>
+          <button class="btn-primary" id="btnImportJson" style="margin-top:0.7rem;max-width:200px">IMPORT</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="divider"></div>

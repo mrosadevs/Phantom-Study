@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
 async function callGemini(prompt) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('Gemini API key not configured');
+  if (!key) throw new Error('Gemini API key not configured on server');
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
   const response = await fetch(url, {
@@ -60,7 +60,7 @@ async function callGemini(prompt) {
 
 async function callKimi(prompt) {
   const key = process.env.NVIDIA_API_KEY;
-  if (!key) throw new Error('NVIDIA API key not configured');
+  if (!key) throw new Error('NVIDIA API key not configured on server');
 
   const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
     method: 'POST',
@@ -72,7 +72,7 @@ async function callKimi(prompt) {
       model: 'moonshotai/kimi-k2.5',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 4096,
+      max_tokens: 16384,
     }),
   });
 
@@ -82,5 +82,7 @@ async function callKimi(prompt) {
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  // Kimi is a reasoning model — content may be in `content` or `reasoning_content`
+  const msg = data.choices?.[0]?.message;
+  return msg?.content || msg?.reasoning_content || '';
 }

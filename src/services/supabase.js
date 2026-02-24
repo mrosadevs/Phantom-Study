@@ -34,6 +34,11 @@ export async function signOut() {
   await sb.auth.signOut();
 }
 
+// Persist "sample workspace created" flag across all browsers via user metadata
+export async function markSampleCreated() {
+  await sb.auth.updateUser({ data: { sample_created: true } });
+}
+
 export async function getSession() {
   const { data: { session } } = await sb.auth.getSession();
   return session;

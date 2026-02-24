@@ -14,6 +14,12 @@ const STEPS = [
     position: 'below',
   },
   {
+    target: '#btnImportWorkspace',
+    title: 'IMPORT A WORKSPACE',
+    desc: 'Got a workspace shared by a friend? Click IMPORT to load it from a .json file — all modules and study content included!',
+    position: 'below',
+  },
+  {
     target: '#themeSlotDash',
     title: 'LIGHT / DARK MODE',
     desc: 'Toggle between light and dark mode anytime with this button.',
@@ -36,16 +42,22 @@ const MODULE_STEPS = [
     position: 'below',
   },
   {
-    target: '.model-selector',
-    title: 'CHOOSE AN AI MODEL',
-    desc: 'Pick between Gemini (Google) or Kimi (Moonshot) for content generation. Each model has different strengths!',
+    target: '#btnGenerateAll',
+    title: 'GENERATE WITH AI',
+    desc: 'After uploading or pasting your notes, hit this button to instantly generate flashcards, quiz questions, and fill-in-the-blank sets using Groq AI (Llama 3.3 70B).',
+    position: 'above',
+  },
+  {
+    target: '#btnExportModule',
+    title: 'EXPORT THIS MODULE',
+    desc: 'Download this module as a .json file to back it up or share it with friends. They can import it on their own account!',
     position: 'below',
   },
   {
-    target: '#btnGenerateAll',
-    title: 'GENERATE WITH AI',
-    desc: 'After uploading content, hit this button to generate flashcards, quiz questions, and fill-in-the-blank sets.',
-    position: 'above',
+    target: '#btnImportModuleFile',
+    title: 'IMPORT A MODULE',
+    desc: 'Got a module shared by a classmate? Click IMPORT to load it from a .json file — all flashcards, quiz questions, and fill-in-the-blank content included.',
+    position: 'below',
   },
   {
     target: '.study-actions, .mode-buttons',

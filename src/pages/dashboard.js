@@ -1,6 +1,5 @@
-import { getWorkspaces, createWorkspace, deleteWorkspace } from '../services/supabase.js';
+import { getWorkspaces, createWorkspace, deleteWorkspace, saveModuleData, markSampleCreated } from '../services/supabase.js';
 import { showPage, esc, toast, EMOJIS, SAMPLE_FLASHCARDS, SAMPLE_QUIZ, SAMPLE_FILLIN } from '../utils/helpers.js';
-import { saveModuleData, createWorkspace as createWs } from '../services/supabase.js';
 import { exportWorkspace, importWorkspace, pickJSONFile } from '../services/export-import.js';
 import { openWorkspace } from './workspace.js';
 import { openModule } from './module.js';
@@ -187,27 +186,30 @@ function closeModal(id) {
 // ==================== SAMPLE WORKSPACE ====================
 
 async function createSampleIfNeeded(user) {
+  // Check user metadata first — persists across ALL browsers and devices
+  if (user.user_metadata?.sample_created) return;
+  // Fallback: check localStorage for the current browser
   if (localStorage.getItem('phantom-sample-created-' + user.id)) return;
 
   try {
+    // Also check DB in case metadata update failed previously
     const existing = await getWorkspaces(user.id, null);
-    if (existing.some(w => w.name === 'Biology 101 (Sample)')) {
+    if (existing.length > 0) {
+      // User already has workspaces — mark done and skip
       localStorage.setItem('phantom-sample-created-' + user.id, '1');
+      markSampleCreated().catch(() => {});
       return;
     }
 
     // Create sample workspace
-    const ws = await createWorkspace('Biology 101 (Sample)', '\uD83E\uDDEC', 'Sample workspace to explore Phantom Study', null, user.id);
-
-    // Create sample module
+    const ws  = await createWorkspace('Biology 101 (Sample)', '\uD83E\uDDEC', 'Sample workspace — feel free to delete it!', null, user.id);
     const mod = await createWorkspace('Cell Biology', '\uD83E\uDDA0', 'Introduction to cell structure', ws.id, user.id);
-
-    // Save sample study data
     await saveModuleData(mod.id, user.id, SAMPLE_FLASHCARDS, SAMPLE_QUIZ, SAMPLE_FILLIN);
 
+    // Persist flag in user metadata (survives new browsers) and localStorage
+    await markSampleCreated();
     localStorage.setItem('phantom-sample-created-' + user.id, '1');
 
-    // Reload workspaces to show sample
     loadWorkspaces();
   } catch (e) {
     console.error('Failed to create sample workspace:', e);

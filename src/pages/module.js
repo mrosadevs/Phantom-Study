@@ -1,5 +1,6 @@
 import { getModuleData, saveModuleData, getWorkspaceById } from '../services/supabase.js';
-import { callAI, getPrompt, parseFlash, parseQuiz, parseFill, parseAll, getSelectedModel, setSelectedModel, promptFlash, promptQuiz, promptFill, promptAll } from '../services/ai.js';
+import { callAI, getPrompt, parseFlash, parseQuiz, parseFill, parseAll, getFilePrompt,
+         PROVIDERS, getSelectedProvider, setProvider, getApiKey, setApiKey, getModel, setModel, hasAIKey } from '../services/ai.js';
 import { exportModule, importModule, pickJSONFile } from '../services/export-import.js';
 import { parseFile } from '../services/file-parser.js';
 import { showPage, esc, escA, toast } from '../utils/helpers.js';
@@ -27,7 +28,7 @@ export async function openModule(modId, item = null) {
   document.getElementById('pasteText').value = '';
   updateCounts();
   renderEditor();
-  initModelSelector();
+  initAISettings();
   showPage('module');
 }
 
@@ -75,7 +76,7 @@ export function initModule() {
   document.getElementById('btnSaveEdits')?.addEventListener('click', saveEdits);
 
   // Model selector
-  initModelSelector();
+  initAISettings();
 
   // Import from ChatGPT/Claude
   initImportSection();
@@ -138,75 +139,171 @@ function initImportSection() {
       .catch(() => toast('Copy failed — select and copy manually', 'error'));
   });
 
-  // Import JSON
+  // Step 3 — upload the .json file the AI produced
+  const drop  = document.getElementById('jsonDropzone');
+  const input = document.getElementById('jsonFileInput');
+  if (drop && input) {
+    drop.addEventListener('click', () => input.click());
+    drop.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+    });
+    ['dragenter', 'dragover'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('dragover'); }));
+    ['dragleave', 'drop'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('dragover'); }));
+    drop.addEventListener('drop', e => handleImportFile(e.dataTransfer.files[0]));
+    input.addEventListener('change', e => {
+      handleImportFile(e.target.files[0]);
+      input.value = ''; // so re-picking the same filename still fires change
+    });
+  }
+
+  // Fallback for chatbots that can't emit downloadable files
+  document.getElementById('btnPasteInstead')?.addEventListener('click', () => {
+    const box = document.getElementById('pasteFallback');
+    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  });
   document.getElementById('btnImportJson')?.addEventListener('click', handleImportJson);
 }
 
 function updateImportPrompt() {
   const el = document.getElementById('importPromptText');
   if (!el) return;
-  const sample = '[PASTE YOUR NOTES/CONTENT HERE]';
-  const map = { all: promptAll, flashcards: promptFlash, quiz: promptQuiz, fillin: promptFill };
-  el.textContent = (map[importType] || promptAll)(sample);
+  el.textContent = getFilePrompt(importType);
 }
 
-async function handleImportJson() {
-  const raw = document.getElementById('importJsonInput').value.trim();
-  if (!raw) { toast('Paste the JSON response first!', 'error'); return; }
+/** Writes an imported payload into the module. Shared by the file and paste paths. */
+async function applyImportedRaw(raw) {
+  if (importType === 'all') {
+    const parsed = parseAll(raw);
+    const total  = parsed.flashcards.length + parsed.quiz.length + parsed.fillin.length;
+    if (!total) throw new Error('No valid study data found in that JSON');
+    modData.flashcards = parsed.flashcards;
+    modData.quiz       = parsed.quiz;
+    modData.fillin     = parsed.fillin;
+    await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
+    updateCounts();
+    renderEditor();
+    return `Imported! ${parsed.flashcards.length} flashcards \u00b7 ${parsed.quiz.length} quiz Q's \u00b7 ${parsed.fillin.length} fill-ins`;
+  }
+
+  let parsed;
+  if (importType === 'flashcards') {
+    parsed = parseFlash(raw);
+    if (!parsed.length) throw new Error('No valid flashcards found');
+    modData.flashcards = parsed;
+  } else if (importType === 'quiz') {
+    parsed = parseQuiz(raw);
+    if (!parsed.length) throw new Error('No valid quiz questions found');
+    modData.quiz = parsed;
+  } else {
+    parsed = parseFill(raw);
+    if (!parsed.length) throw new Error('No valid fill-in questions found');
+    modData.fillin = parsed;
+  }
+  await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
+  updateCounts();
+  renderEditor();
+  return `Imported ${parsed.length} ${importType}!`;
+}
+
+/** Step 3, the main path: the .json file the user's chatbot handed them. */
+async function handleImportFile(file) {
+  if (!file) return;
+  if (!/\.json$/i.test(file.name) && file.type !== 'application/json') {
+    toast('That is not a .json file — upload the one your AI generated.', 'error');
+    return;
+  }
+
+  let raw;
+  try { raw = await file.text(); }
+  catch { toast('Could not read that file.', 'error'); return; }
 
   try {
-    if (importType === 'all') {
-      const parsed = parseAll(raw);
-      const total  = parsed.flashcards.length + parsed.quiz.length + parsed.fillin.length;
-      if (!total) throw new Error('No valid study data found in JSON');
-      modData.flashcards = parsed.flashcards;
-      modData.quiz       = parsed.quiz;
-      modData.fillin     = parsed.fillin;
-      await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
-      updateCounts();
-      renderEditor();
-      document.getElementById('importJsonInput').value = '';
-      toast(`Imported! ${parsed.flashcards.length} flashcards · ${parsed.quiz.length} quiz Q's · ${parsed.fillin.length} fill-ins`, 'success');
-    } else {
-      let parsed;
-      if (importType === 'flashcards') {
-        parsed = parseFlash(raw);
-        if (!parsed.length) throw new Error('No valid flashcards found');
-        modData.flashcards = parsed;
-      } else if (importType === 'quiz') {
-        parsed = parseQuiz(raw);
-        if (!parsed.length) throw new Error('No valid quiz questions found');
-        modData.quiz = parsed;
-      } else {
-        parsed = parseFill(raw);
-        if (!parsed.length) throw new Error('No valid fill-in questions found');
-        modData.fillin = parsed;
-      }
-      await saveModuleData(window._phantomCurrentModId, window._phantomUser.id, modData.flashcards, modData.quiz, modData.fillin);
-      updateCounts();
-      renderEditor();
-      document.getElementById('importJsonInput').value = '';
-      toast(`Imported ${parsed.length} ${importType}!`, 'success');
-    }
+    toast(await applyImportedRaw(raw), 'success');
   } catch (e) {
     toast('Import error: ' + e.message, 'error');
   }
 }
 
-function initModelSelector() {
-  const selector = document.getElementById('modelSelector');
-  if (!selector) return;
+/** Fallback path: JSON pasted in, for chatbots that cannot produce files. */
+async function handleImportJson() {
+  const box = document.getElementById('importJsonInput');
+  const raw = (box?.value || '').trim();
+  if (!raw) { toast('Paste the JSON first!', 'error'); return; }
 
-  const currentModel = getSelectedModel();
-  selector.querySelectorAll('.model-option').forEach(opt => {
-    const model = opt.dataset.model;
-    opt.classList.toggle('selected', model === currentModel);
-    opt.addEventListener('click', () => {
-      setSelectedModel(model);
-      selector.querySelectorAll('.model-option').forEach(o => o.classList.remove('selected'));
-      opt.classList.add('selected');
-    });
+  try {
+    const msg = await applyImportedRaw(raw);
+    box.value = '';
+    toast(msg, 'success');
+  } catch (e) {
+    toast('Import error: ' + e.message, 'error');
+  }
+}
+
+function initAISettings() {
+  const sel = document.getElementById('aiProvider');
+  if (!sel) return;
+
+  sel.innerHTML = Object.entries(PROVIDERS)
+    .map(([id, p]) => `<option value="${escA(id)}">${esc(p.label)}</option>`).join('');
+
+  const keyInput   = document.getElementById('aiKey');
+  const modelInput = document.getElementById('aiModel');
+  const status     = document.getElementById('aiKeyStatus');
+  const note       = document.getElementById('aiProviderNote');
+  const link       = document.getElementById('aiKeyLink');
+
+  function render() {
+    const id    = getSelectedProvider();
+    const p     = PROVIDERS[id];
+    const saved = getApiKey(id);
+
+    sel.value              = id;
+    keyInput.value         = saved;
+    keyInput.placeholder   = p.keyPrefix ? `${p.keyPrefix}...` : 'Paste your API key';
+    modelInput.value       = getModel(id);
+    modelInput.placeholder = p.defaultModel;
+    note.textContent       = p.note;
+    link.href              = p.keyUrl;
+    status.textContent     = saved ? 'KEY SAVED' : 'NO KEY';
+    status.classList.toggle('set', !!saved);
+  }
+
+  sel.addEventListener('change', () => { setProvider(sel.value); render(); });
+
+  document.getElementById('btnSaveKey')?.addEventListener('click', () => {
+    const id  = getSelectedProvider();
+    const key = keyInput.value.trim();
+    if (!key) { toast('Paste an API key first!', 'error'); return; }
+    setApiKey(id, key);
+    setModel(id, modelInput.value.trim());
+    // Storage can be blocked (private mode) — confirm it actually persisted.
+    if (!getApiKey(id)) {
+      toast('Could not save — this browser is blocking local storage.', 'error');
+      return;
+    }
+    render();
+    toast(`${PROVIDERS[id].label} key saved to this browser.`, 'success');
   });
+
+  document.getElementById('btnClearKey')?.addEventListener('click', () => {
+    const id = getSelectedProvider();
+    setApiKey(id, '');
+    setModel(id, '');
+    render();
+    toast('Key removed from this browser.', 'info');
+  });
+
+  render();
+}
+
+/** Generation needs a key; the copy-paste import path does not. */
+function ensureKey() {
+  if (hasAIKey()) return true;
+  toast('Add your own API key above — or use the "No API key?" panel below, which needs none.', 'error');
+  document.getElementById('aiSettings')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return false;
 }
 
 // ==================== FILE UPLOAD ====================
@@ -229,6 +326,7 @@ async function handleFile(file) {
 async function generateAllAI() {
   const text = document.getElementById('pasteText').value.trim() || uploadedText;
   if (!text || text.length < 20) { toast('Paste some text or upload a file first!', 'error'); return; }
+  if (!ensureKey()) return;
 
   const btn = document.getElementById('btnGenAll');
   const orig = btn.innerHTML;
@@ -266,10 +364,11 @@ async function generateAllAI() {
 async function generateAI(type) {
   const text = document.getElementById('pasteText').value.trim() || uploadedText;
   if (!text || text.length < 20) { toast('Paste some text first!', 'error'); return; }
+  if (!ensureKey()) return;
 
   const card = document.getElementById('aiCard');
   const saved = card.innerHTML;
-  card.innerHTML = `<div class="ai-loading"><div class="big-spinner"></div><p>GENERATING ${type.toUpperCase()}...</p><p style="font-size:0.62rem;margin-top:0.5rem">Free tier — may take a moment</p></div>`;
+  card.innerHTML = `<div class="ai-loading"><div class="big-spinner"></div><p>GENERATING ${type.toUpperCase()}...</p><p style="font-size:0.62rem;margin-top:0.5rem">Running on your own API key</p></div>`;
 
   try {
     const raw = await callAI(getPrompt(type, text));

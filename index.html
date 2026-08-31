@@ -46,10 +46,11 @@
 <div class="disclaimer-overlay" id="disclaimerOverlay">
   <div class="disclaimer-box">
     <div class="disclaimer-logo">PHANTOM STUDY</div>
-    <div class="disclaimer-title">Quick Heads Up</div>
+    <div class="disclaimer-title">How the AI Works Here</div>
     <p class="disclaimer-text">
-      <strong>Phantom Study runs on free-tier infrastructure.</strong> The site is hosted on a free plan and AI features use free API credits.<br><br>
-      AI generation may occasionally be <strong>slow, limited, or temporarily unavailable</strong> during peak times. If it doesn't work, try again shortly or create your sets manually.<br><br>
+      Phantom Study is free and runs on free-tier hosting &mdash; so it doesn't pay for any AI itself. There are <strong>two ways</strong> to build your study sets:<br><br>
+      <strong>1. No account needed anywhere.</strong> Copy the prompt we give you, hand it to ChatGPT, Claude, or Gemini along with your lecture notes, and upload the file it returns. Free on every chatbot.<br><br>
+      <strong>2. Bring your own API key.</strong> Paste an OpenAI, Anthropic, or Gemini key to generate sets right here in one click. Your key is stored <strong>only in this browser</strong> and goes straight to that provider &mdash; never to us.<br><br>
       If Phantom Study has helped your studies, consider supporting it to keep things running!
     </p>
     <div class="kofi-inline" id="disclaimerKofi"></div>
@@ -473,15 +474,27 @@
   <div class="ai-section">
     <div class="section-heading">AI GENERATOR <span class="ai-badge">AI</span></div>
 
-    <!-- MODEL INFO -->
-    <div class="model-selector" id="modelSelector">
-      <div class="model-option selected" data-model="groq">
-        <div class="model-radio"></div>
-        <div class="model-info">
-          <div class="model-name">Llama 3.3 70B <span style="font-size:0.7em;opacity:0.6;font-weight:400;">via Groq</span></div>
-          <div class="model-desc">Meta's powerful open-source model on Groq's ultra-fast inference. Generous free tier.</div>
+    <!-- AI SETTINGS — bring your own key -->
+    <div class="ai-settings" id="aiSettings">
+      <div class="ai-settings-head">
+        <div>
+          <div class="model-name">YOUR API KEY</div>
+          <div class="model-desc">Stored only in this browser &mdash; never sent to Phantom Study.</div>
         </div>
+        <span class="ai-key-status" id="aiKeyStatus">NO KEY</span>
       </div>
+      <div class="ai-settings-grid">
+        <select class="form-input" id="aiProvider" aria-label="AI provider"></select>
+        <input class="form-input" id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your API key" aria-label="API key">
+        <input class="form-input" id="aiModel" type="text" autocomplete="off" spellcheck="false" placeholder="model" aria-label="Model">
+      </div>
+      <div class="ai-settings-actions">
+        <button class="btn-primary" id="btnSaveKey">SAVE KEY</button>
+        <button class="btn-ghost" id="btnClearKey">REMOVE</button>
+        <a class="ai-key-link" id="aiKeyLink" href="#" target="_blank" rel="noopener noreferrer">Get a key &rarr;</a>
+      </div>
+      <p class="ai-settings-note" id="aiProviderNote"></p>
+      <p class="ai-settings-note">No key? Use <strong>&ldquo;No API key?&rdquo;</strong> below &mdash; ChatGPT, Claude or Gemini builds the file, you upload it.</p>
     </div>
 
     <div class="ai-generate-card" id="aiCard">
@@ -498,25 +511,43 @@
     <!-- IMPORT FROM CHATGPT/CLAUDE -->
     <div class="import-section" id="importSection">
       <button class="btn-import-toggle" id="btnImportToggle">
-        <span>&#129302;</span> Generate with any AI &rarr; Import here
+        <span>&#129302;</span> No API key? Build your sets with ChatGPT, Claude or Gemini &rarr;
       </button>
       <div class="import-panel" id="importPanel" style="display:none">
-        <p class="import-desc">Copy the prompt below, paste it into ChatGPT, Claude, or any AI along with your notes. Then paste the JSON back here to import everything instantly.</p>
-        <div class="import-type-tabs">
-          <button class="tab-btn active" id="impAll"   style="flex:unset;padding:0.4rem 0.8rem">&#9889; All</button>
-          <button class="tab-btn" id="impFlash"        style="flex:unset;padding:0.4rem 0.8rem">Flashcards</button>
-          <button class="tab-btn" id="impQuiz"         style="flex:unset;padding:0.4rem 0.8rem">Quiz</button>
-          <button class="tab-btn" id="impFill"         style="flex:unset;padding:0.4rem 0.8rem">Fill-In</button>
+        <p class="import-desc">No API key needed &mdash; let ChatGPT, Claude, or Gemini build your sets, then bring the file back here.</p>
+
+        <div class="import-step">
+          <div class="import-step-head"><span class="import-step-num">1</span> Pick what you want to make</div>
+          <div class="import-type-tabs">
+            <button class="tab-btn active" id="impAll"   style="flex:unset;padding:0.4rem 0.8rem">&#9889; All</button>
+            <button class="tab-btn" id="impFlash"        style="flex:unset;padding:0.4rem 0.8rem">Flashcards</button>
+            <button class="tab-btn" id="impQuiz"         style="flex:unset;padding:0.4rem 0.8rem">Quiz</button>
+            <button class="tab-btn" id="impFill"         style="flex:unset;padding:0.4rem 0.8rem">Fill-In</button>
+          </div>
         </div>
-        <div class="import-prompt-box">
-          <div class="import-prompt-label">COPY THIS PROMPT &darr;</div>
-          <pre class="import-prompt-text" id="importPromptText"></pre>
-          <button class="btn-ghost" id="btnCopyPrompt" style="margin-top:0.5rem">&#128203; COPY PROMPT</button>
+
+        <div class="import-step">
+          <div class="import-step-head"><span class="import-step-num">2</span> Copy this prompt and give it to your AI</div>
+          <p class="import-step-hint">Open <strong>ChatGPT</strong>, <strong>Claude</strong>, or <strong>Gemini</strong>. Attach your lecture PDF, slides, or notes &mdash; then paste this prompt and send it.</p>
+          <div class="import-prompt-box">
+            <pre class="import-prompt-text" id="importPromptText"></pre>
+          </div>
+          <button class="btn-ghost" id="btnCopyPrompt" style="margin-top:0.6rem;max-width:200px">&#128203; COPY PROMPT</button>
         </div>
-        <div style="margin-top:1rem">
-          <div class="import-prompt-label">PASTE JSON RESPONSE &darr;</div>
-          <textarea class="form-input" id="importJsonInput" rows="6" placeholder='Paste the JSON array from ChatGPT/Claude here...'></textarea>
-          <button class="btn-primary" id="btnImportJson" style="margin-top:0.7rem;max-width:200px">IMPORT</button>
+
+        <div class="import-step">
+          <div class="import-step-head"><span class="import-step-num">3</span> Upload the file it gives you</div>
+          <p class="import-step-hint">The AI will hand back a <code>phantom-study.json</code> file. Download it, then drop it here &mdash; your sets build instantly.</p>
+          <div class="json-dropzone" id="jsonDropzone" role="button" tabindex="0">
+            <div class="json-dropzone-icon">&#128196;</div>
+            <div class="json-dropzone-text">Drop your <strong>.json</strong> file here or click to browse</div>
+          </div>
+          <input type="file" id="jsonFileInput" accept=".json,application/json" hidden>
+          <button class="import-fallback-toggle" id="btnPasteInstead">AI couldn&rsquo;t make a file? Paste the JSON instead &darr;</button>
+          <div id="pasteFallback" style="display:none">
+            <textarea class="form-input" id="importJsonInput" rows="6" placeholder="Paste the JSON from your AI here..."></textarea>
+            <button class="btn-primary" id="btnImportJson" style="margin-top:0.7rem;max-width:200px">IMPORT</button>
+          </div>
         </div>
       </div>
     </div>

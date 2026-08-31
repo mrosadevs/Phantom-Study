@@ -44,7 +44,7 @@ const MODULE_STEPS = [
   {
     target: '#btnGenerateAll',
     title: 'GENERATE WITH AI',
-    desc: 'After uploading or pasting your notes, hit this button to instantly generate flashcards, quiz questions, and fill-in-the-blank sets using Groq AI (Llama 3.3 70B).',
+    desc: 'After uploading or pasting your notes, hit this button to generate flashcards, quiz questions, and fill-in-the-blank sets. Add your own OpenAI, Anthropic, or Gemini API key first — or skip the key entirely and use the import panel below it.',
     position: 'above',
   },
   {

@@ -76,7 +76,7 @@
 [data-theme="light"] .quiz-choice { box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 
 /* Model selector */
-[data-theme="light"] .model-option { box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+[data-theme="light"] .ai-settings { box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 
 /* Theme toggle in light mode */
 [data-theme="light"] .theme-toggle { background: #fff; border-color: var(--border); }

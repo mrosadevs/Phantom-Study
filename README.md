@@ -18,7 +18,8 @@
 
 ## ✨ Features
 
-- 🧠 **AI-Powered Generation** — Paste your notes or upload slides, get study sets instantly
+- 🧠 **AI Generation (bring your own key)** — Paste notes or upload slides, get study sets instantly. Supports OpenAI, Anthropic, and Google Gemini; your key is stored only in your browser.
+- 📋 **No-key Import** — Copy a ready-made prompt into any chatbot, paste the JSON back, done
 - 📇 **Flashcards** — Flip-style cards with front/back for active recall
 - ❓ **Quizzes** — Multiple-choice questions generated from your content
 - ✏️ **Fill-in-the-Blank** — Cloze-style exercises for deeper retention
@@ -60,7 +61,9 @@
 npx serve .
 ```
 
-> **Note:** You'll need to configure your Supabase credentials in the code for the AI generation backend to work. The landing page works standalone.
+> **Note:** Supabase credentials must be configured in the code for accounts and saved study sets. The landing page works standalone.
+>
+> **AI keys:** There is no hosted API key and no server proxy. Users paste their own key into **AI Settings** on the module page; it is kept in `localStorage` and sent straight to the provider, never to this app. Model IDs are editable in the same panel, so a provider retiring a model does not require a redeploy. Users without a key can use the copy-prompt / paste-JSON import instead.
 
 ---
 
